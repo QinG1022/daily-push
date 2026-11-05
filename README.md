@@ -1,47 +1,42 @@
-# 每天一条：天气 + 科技要闻 → 微信 / 邮箱
+# 每天一条：技术早报 + 天气，推到微信
 
-一个零依赖（只用 Python 标准库）的小脚本，每天定时把「当天天气 + 前一天科技要闻」推到你的微信。
+一个零依赖（只用 Python 标准库）的小脚本。每天 09:00 / 12:00 / 18:00 自动抓取科技新闻和天气，整理成一份简报，通过 **Server酱（方糖）** 推到微信——点开就是完整网页，15 条标题都能点。
 
-- **数据免费、不用注册 API key**：天气用 [Open-Meteo](https://open-meteo.com/)，新闻抓 IT之家 / 爱范儿 / 少数派 / Solidot / 极客公园 / 钛媒体的 RSS
-- **推送渠道可插拔**：微信公众号模板消息、邮件、Server酱、PushPlus、企业微信机器人，可同时发多个
-- **跑在 GitHub Actions 上**，电脑关机也照发，一天三次（09:00 / 12:00 / 18:00）
+- **数据免费、不用注册 API key**：天气用 [Open-Meteo](https://open-meteo.com/)，新闻抓 IT之家 / 爱范儿 / 少数派 / Solidot / 极客公园 / 钛媒体 / 机核 / 游研社 / 界面新闻的 RSS
+- **推送渠道可插拔**：Server酱、公众号模板消息、邮件、PushPlus、企业微信机器人
+- **跑在 GitHub Actions 上**，电脑关机也照发。一天三次，每次覆盖不同时段，内容不重复
+- **选稿有品类配额**：手机 / 大模型 / 游戏有固定份额，Epic 喜加一有保底
 
 ## 效果长这样
 
-```
-## 11月5日 周四 · 晚间科技速递
+微信里收到「方糖」服务号的一条消息，点开是这个页面（这是真实抓取的一期）：
 
-**北京** 🌫 有雾　4~16℃　降水 0%
-现在 8℃（体感 4℃）· 湿度 33% · 风 10km/h
+```markdown
+### 🌤 天气 · 岳阳（湖南）
 
-今天 🌫有雾 4~16℃ 降水0%　明天 ⛅多云 3~13℃ 降水0%　后天 ❄️大雪 1~6℃ 降水100%
+- 今天 ☁️ 阴　15~22℃　降水 29%
+- 明天 🌧 强阵雨　14~16℃　降水 100%
+- 后天 🌧 强阵雨　14~17℃　降水 100%
+- 现在 16℃（体感 16℃）· 湿度 89% · 风 6km/h
+- 日出 06:43 · 日落 17:37 · 紫外线 1（低） · AQI 92（良）
 
-### 📰 近 30 小时要闻
-1. 反对声浪下 OpenAI 重申将承担数据中心供电成本，承诺征求社区意见、公开建设规划 — IT之家 · 2小时前
-   https://www.ithome.com/1/022/958.htm
-2. 比亚迪腾势 Z9S 首次 OTA：AI 超级智能体迪迪虾上车，新增代言人王力宏场景播报 — IT之家 · 3小时前
-   https://www.ithome.com/1/022/911.htm
-3. AI安全背后的哲学思想，有效利他主义如何影响硅谷？（上篇） — 钛媒体 · 3小时前
-   https://www.tmtpost.com/8194754.html
+### 📰 近 12 小时要闻
+
+1. Epic 喜加一：《浮游世界》游戏免费领取（IT之家 · 1小时前）
+2. 12499 元 / 15999 元起：苹果 M6 芯片款 iMac、MacBook Pro 开售（IT之家 · 1小时前）
+3. 5499 元起：苹果 iPad mini 8 开售，A20 Pro 芯片（IT之家 · 1小时前）
+4. 美国人形机器人第一股：Agility Robotics 本周登陆纳斯达克（IT之家 · 5小时前）
+5. 反对声浪下 OpenAI 重申将承担数据中心供电成本（IT之家 · 6小时前）
+6. 美国国会即将"变天"，马斯克商业帝国恐遭打压（界面新闻 · 1小时前）
 ...
+15. 对话星尘智能来杰：机器人的「iPhone 4 时刻」（爱范儿 · 11小时前）
 
 ### 🧥 出门提示
-- 早晚温差 12℃，分层穿衣最稳
-- 早晚偏凉，出门加件外套
-- 穿搭建议：厚外套 / 棉服 + 毛衣
+
+- 穿搭建议：长袖衬衫或薄外套即可
 ```
 
-在微信公众号里收到的是**紧凑版**（公众号模板消息有字数限制，放不了长链接）：
-
-```
-11月5日 晚间科技速递
-🌤 天气：北京 🌫有雾 4~16℃ 降水0%
-📰 要闻：1. 反对声浪下 OpenAI 重申将承担数据…
-        2. 比亚迪腾势 Z9S 首次 OTA：AI 超级…
-        3. AI安全背后的哲学思想，有效利他主义…
-🧥 提示：早晚温差 12℃，分层穿衣最稳；早晚偏凉，出门加件外套
-现在8℃ 体感4℃ · 明天⛅多云 3~13℃
-```
+每条标题在页面上都是可点的链接，点一下直接跳到 IT之家 / 界面 / 少数派的原文。
 
 ---
 
@@ -53,7 +48,7 @@
 
 命令行方式：
 
-```bash
+```powershell
 cd daily-push
 copy .env.example .env      # macOS/Linux 用 cp
 .\运行.cmd 预览             # 等价于 python main.py --dry-run
@@ -63,174 +58,79 @@ copy .env.example .env      # macOS/Linux 用 cp
 
 `运行.cmd` 支持的快捷参数：`预览` / `测试` / `发送`；不带参数则是交互式菜单。
 
----
-
-## 二、微信公众号怎么配
-
-先说结论，因为这决定你走哪条路：
-
-| 你的公众号 | 能用模板消息吗 | 怎么办 |
-|---|---|---|
-| **订阅号**（个人注册默认就是这种） | ❌ 不行 | 用下面的**路线 A：接口测试号** |
-| **认证服务号**（企业主体，年审过） | ✅ 可以 | 路线 B，但模板字段有 20 字限制，详见下文 |
-| **接口测试号**（谁都能申请） | ✅ 可以 | **路线 A，最省事，推荐** |
-
-> 关键事实：`模板消息` 是服务号能力，**订阅号没有**，所以「拿自己的订阅号给粉丝推送」这条路根本不通。「接口测试号」是微信官方提供的沙箱，能力等同认证服务号、但不用认证，自用完全够。
-
-### 30 秒自检：你那个号到底是哪种
-
-登录 <https://mp.weixin.qq.com> 后看左侧菜单：
-
-| 你看到的 | 结论 |
-|---|---|
-| 有「**模板消息**」（一般在「功能」下面） | 服务号，可以直接用 |
-| 只有「内容管理 / 互动管理 / 数据分析 / 收入变现 / 账号成长」，创作台是「文章 / 贴图 / 播客 / 直播」 | **订阅号**，不能用模板消息 |
-| 连「设置与开发」都找不到 | 这个号没开放 API 权限，更只能用测试号 |
-
-两条硬规则，能省掉很多纠结：
-
-1. **个人主体注册的公众号一律是订阅号**，而个人主体又不支持微信认证，所以个人号永远拿不到模板消息权限。
-2. **订阅号和服务号注册后不能互转**，只能另注册一个企业主体的服务号（要营业执照 + 300 元/年认证费）。
-
-所以：自用推送走**路线 A 测试号**，你那个订阅号留着写文章就行，两者不冲突。总用户数只有 1 也是完全正常的——测试号的推送发给你自己的微信号，跟公众号粉丝数无关。
-
-### 路线 A：接口测试号（推荐，不需要任何认证）
-
-1. 打开 <https://mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login>，微信扫码登录
-2. 页面上直接能看到 **appID** 和 **appsecret** → 填到 `.env` 的 `WX_APPID` / `WX_APPSECRET`
-3. 用微信扫页面上的**测试号二维码**关注它（关注后才能在下面的「用户列表」里看到自己）
-4. 「用户列表」里那一串 `oXXXXX...` 就是你的 **openid** → 填到 `WX_OPENID`
-5. 在「模板消息」区域点 **新增测试模板**：
-   - 标题：`每日速递`
-   - 内容（直接复制，注意保留 `{{ }}`）：
-
-     ```
-     {{title.DATA}}
-     🌤 天气：{{weather.DATA}}
-     📰 要闻：{{news.DATA}}
-     🧥 提示：{{tip.DATA}}
-     {{remark.DATA}}
-     ```
-
-     如果配了 AI（见第五节），再加一行 `💡 一句：{{ai.DATA}}` 放在 `{{remark.DATA}}` 前面。
-   - 提交后会得到一个**模板 ID** → 填到 `WX_TEMPLATE_ID`
-6. 验证：
-
-   ```bash
-   python main.py --test
-   ```
-
-   微信里应该立刻收到一条「daily-push 测试」。
-
-### 路线 B：你自己的认证服务号
-
-流程一样（基本配置拿 AppID/AppSecret，用户管理拿 openid），只有两点不同：
-
-1. **模板不能自由写**。认证服务号的模板要从「类目模板库」里选，字段类型是固定的（`thing` 最多 20 字、`phrase` 最多 5 字…）。
-2. 所以长内容塞不进去。这时用 `n1`~`n5` 这五个字段，每个是一条标题（程序已限制在 20 字内）：
-
-   ```
-   {{title.DATA}}
-   {{weather.DATA}}
-   要闻1：{{n1.DATA}}
-   要闻2：{{n2.DATA}}
-   要闻3：{{n3.DATA}}
-   {{remark.DATA}}
-   ```
-
-   并在 `.env` 里显式指定：
-
-   ```dotenv
-   WX_FIELDS=title,weather,n1,n2,n3,remark
-   ```
-
-> ⚠️ **海外 IP 白名单**：认证服务号如果在「基本配置」里开启了 IP 白名单，GitHub Actions 的 IP 每次都不一样，会直接调用失败。要么关掉白名单，要么改成本地跑。测试号没有这个问题。
+> PowerShell 里必须写 `.\运行.cmd`（前面带 `.\`），CMD 里可以直接写 `运行.cmd`。
 
 ---
 
-## 三、部署到 GitHub Actions（电脑关机也能收）
+## 二、配置推送渠道
 
-这台机器上没装 git，最省事的是用 **GitHub Desktop**（图形界面，帮你搞定登录和认证）：
+### 2.1 Server酱（推荐，也是默认主路径）
 
-### 3.1 把代码传上去
-
-1. 下载安装 <https://desktop.github.com/>，用你的 GitHub 账号登录
-2. 菜单 **File → Add local repository** → 选 `daily-push` 这个文件夹
-3. 它提示"不是 Git 仓库，要不要创建一个？"→ 点 **create a repository**
-4. 左下角 Summary 随便填 `init`，点 **Commit to main**
-5. 右上角 **Publish repository** → 勾上/不勾 *Keep this code private* 都行 → 发布
-
-> 用 GitHub Desktop 或 git 命令上传时，`.gitignore` 会生效，`.env`（你的 AppSecret）不会被传上去。
-> **千万不要用网页「拖拽上传」**——网页上传不认 `.gitignore`，会把 `.env` 里的密钥一起传出去。
-
-### 3.2 配置密钥
-
-仓库页 → **Settings → Secrets and variables → Actions**
-
-**Secrets** 标签，4 个（New repository secret）：
-
-| Name | Secret |
-|---|---|
-| `WX_APPID` | 测试号的 appID |
-| `WX_APPSECRET` | 测试号的 appsecret |
-| `WX_TEMPLATE_ID` | 模板 ID |
-| `WX_OPENID` | 你的 openid |
-
-**Variables** 标签，2 个（New repository variable）：
-
-| Name | Value |
-|---|---|
-| `CITY` | `岳阳` |
-| `PUSH_CHANNELS` | `wechat_mp` |
-
-### 3.3 跑一次验证
-
-仓库页 → **Actions** → 左边选「每日推送」→ 右边 **Run workflow** → 绿色按钮。
-等半分钟，微信应该收到；日志里能看到完整内容。
-
-之后每天 09:00 / 12:00 / 18:00（北京时间）自动发，不用再管。
-
-### 3.4 推荐：改用 Server酱，点开就能看全文
-
-公众号模板消息**只是一张通知卡片，不是网页**，微信也没有「展开全文」。而且每个字段只显示**一行**（约 26 字），6 条新闻根本塞不进去，系统会用「…」硬截断——所以你只能看到摘要。
-
-要「点开看全文」，最省事的是换成 **Server酱（方糖）**：微信里收到一条「方糖」服务号消息，点开就是一个渲染好的网页，6 条新闻齐全、链接可点。
+微信里收到一条「方糖」服务号消息，点开就是完整网页，链接可点。
 
 1. 打开 <https://sct.ftqq.com>，微信扫码登录
 2. 进「SendKey」页面，复制那串 `SCT` 开头的密钥
-3. 仓库 → Settings → Secrets and variables → Actions：
-   - **Secrets** 加 `SERVERCHAN_SENDKEY` = 刚才的密钥
-   - **Variables** 把 `PUSH_CHANNELS` 改成 `serverchan`
-4. 重跑一次 workflow
+3. 填进 `.env`：
 
-> **额度**：免费会员每天 5 条。你要 3 条/天，够用但没多少余量——同一天手动重跑两三次就会超，超出后当天不再发。新用户有 7 天全功能试用。
+   ```dotenv
+   PUSH_CHANNELS=serverchan
+   SERVERCHAN_SENDKEY=SCT你的密钥
+   ```
+
+4. 验证：
+
+   ```powershell
+   .\运行.cmd 测试        # 微信「方糖」应立刻收到一条「daily-push 测试消息」
+   ```
+
+> **额度**：免费会员每天 5 条。一天三次用掉 3 条，剩下 2 条余量——手动重跑两三次就会超，超出后当天不再发。新用户有 7 天全功能试用。
 >
-> 想要零额度顾虑就换 PushPlus（约 200 条/天），改 `PUSH_CHANNELS=pushplus` + 加 `PUSHPLUS_TOKEN` 即可。
+> 想要零额度顾虑就换 PushPlus（约 200 条/天），见 2.3。
 
-**如果你更希望消息来自自己的公众号卡片**，那必须自建网页给 `WX_LINK_URL` 用。免费方案是 GitHub Pages，但它要求仓库**公开**：Settings → 最下面 Danger Zone → Change visibility → Make public，然后 Settings → Pages → Source 选 `Deploy from a branch`、目录 `/docs`，再把 `WX_LINK_URL` 设成 `https://你的用户名.github.io/daily-push/`。
+### 2.2 可选：公众号模板消息
 
-几个必须知道的坑：
+如果你已经有**接口测试号**或**认证服务号**，也能推到公众号卡片。但要知道它的天花板：
 
-| 现象 | 原因 | 处理 |
+- 每张卡片只能显示 **3~4 行**，每个字段只显示 **一行**（约 26 字）
+- 没有「展开全文」，点它也不会打开网页（除非你另配 `WX_LINK_URL`）
+
+所以它适合「一眼摘要」，不适合 15 条新闻。这也是本项目默认改用方糖的原因。
+
+| 你的公众号 | 能用模板消息吗 | 怎么办 |
 |---|---|---|
-| 时间不准，晚了几分钟到二十分钟 | GitHub 免费 runner 的定时任务排队延迟 | 正常，无法根治 |
-| 隔了两个月突然不发了 | 仓库 60 天无提交，定时任务被自动停用 | 已带 `keepalive.yml` 每月自动提交一次；万一还是停了，去 Actions 页面点一下「Enable workflow」 |
-| 私有仓库额度不够 | 私有仓库的 Actions 分钟数有免费上限（每月 2000 分钟） | 这套一天三次、每次约 40 秒，一个月只用 60 分钟左右，够用 |
-| 想改时间 | 改 `.github/workflows/daily.yml` 里的 cron | cron 是 UTC，北京时间减去 8 小时（09:00 → `0 1 * * *`） |
+| 订阅号（个人注册默认） | ❌ 不行 | 用接口测试号 |
+| 认证服务号（企业主体） | ✅ 可以 | 但模板字段有 20 字限制 |
+| 接口测试号（谁都能申请） | ✅ 可以 | 最省事 |
 
----
+> 关键事实：模板消息是**服务号**能力，订阅号没有。而个人主体注册的公众号一律是订阅号、又不能做微信认证，所以个人号永远拿不到这个权限。订阅号和服务号注册后也不能互转。
 
-## 四、想在 QQ 上收 / 用别的渠道
+**用接口测试号的流程**：
 
-个人 QQ 没有官方机器人接口，最稳的两条路：
+1. 打开 <https://mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login> 扫码登录
+2. 页面上的 **appID** / **appsecret** → 填 `.env` 的 `WX_APPID` / `WX_APPSECRET`
+3. 扫页面上的**测试号二维码**关注它，然后在「用户列表」里找到你的 `openid` → 填 `WX_OPENID`
+4. 「新增测试模板」，标题写 `每日速递`，内容：
 
-- **邮件 → QQ 邮箱**：配 `PUSH_CHANNELS=mail`，`MAIL_TO=你的QQ号@qq.com`，手机 QQ 会弹邮件提醒。这是最省事、最不会挂的方式。
-- **Qmsg酱**（<https://qmsg.zendee.cn/>）：加一个机器人 QQ 好友，它给你发私聊。本项目没内置（它的接口常变），需要的话按它的文档加个 20 行的渠道模块即可。
+   ```
+   {{title.DATA}}
+   🌤 天气：{{weather.DATA}}
+   📰 要闻：{{news.DATA}}
+   🧥 提示：{{tip.DATA}}
+   {{remark.DATA}}
+   ```
 
-其他已内置渠道：
+   保存后得到**模板 ID** → 填 `WX_TEMPLATE_ID`，并把 `PUSH_CHANNELS` 改成 `wechat_mp`
+
+> ⚠️ **IP 白名单**：认证服务号如果开了 IP 白名单，GitHub Actions 的 IP 每次都不一样，会直接失败。测试号没这个问题。
+
+### 2.3 其他渠道
 
 ```dotenv
-# 邮件
+# PushPlus（额度宽裕，免费约 200 条/天）
+PUSH_CHANNELS=pushplus
+PUSHPLUS_TOKEN=...
+
+# 邮件（完整 HTML，链接可点）
 PUSH_CHANNELS=mail
 SMTP_HOST=smtp.qq.com
 SMTP_PORT=465
@@ -238,18 +138,74 @@ SMTP_USER=you@qq.com
 SMTP_PASS=授权码          # QQ 邮箱：设置 → 账号 → 开启 SMTP → 生成授权码
 MAIL_TO=you@qq.com
 
-# Server酱（微信「方糖」服务号收）  https://sct.ftqq.com/
-SERVERCHAN_SENDKEY=SCT...
-PUSH_CHANNELS=wechat_mp,serverchan
-
-# PushPlus（微信「pushplus」公众号收）  https://www.pushplus.plus/
-PUSHPLUS_TOKEN=...
-
 # 企业微信群机器人（个人也能注册企业微信）
 WECOM_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...
 ```
 
-多个渠道用逗号分隔，程序会**逐个发**，某个渠道挂了不影响其他渠道。
+多个渠道用逗号分隔（如 `serverchan,pushplus`），程序会**逐个发**，某个挂了不影响其他。
+
+---
+
+## 三、部署到 GitHub Actions（电脑关机也能收）
+
+### 3.1 把代码传上去
+
+```powershell
+cd D:\dsh-work\dsh-wenjian\daily-push
+git init -b main
+git add .
+git commit -m "init: 每日科技早报"
+git remote add origin https://github.com/你的用户名/daily-push.git
+git push -u origin main
+```
+
+第一次推会弹浏览器登录，选 **Sign in with your browser** 授权即可。
+
+> `git add` 前用 `git status` 确认 **`.env` 不在列表里**（里面是密钥）。`.gitignore` 已经把它排除了。
+> **千万不要用网页「拖拽上传」**——网页上传不认 `.gitignore`，会把 `.env` 一起传出去。
+
+### 3.2 配置密钥
+
+仓库页 → **Settings → Secrets and variables → Actions**
+
+**Secrets**（New repository secret）：
+
+| Name | 值 |
+|---|---|
+| `SERVERCHAN_SENDKEY` | `SCT...` 你的方糖密钥 |
+
+**Variables**（New repository variable）：
+
+| Name | 值 |
+|---|---|
+| `CITY` | `岳阳` |
+| `PUSH_CHANNELS` | `serverchan` |
+| `NEWS_COUNT` | `15` |
+| `NEWS_MIX` | `phone:4` |
+
+### 3.3 跑一次验证
+
+仓库页 → **Actions** → 左边选「每日推送」→ 右边 **Run workflow** → 绿色按钮。
+
+半分钟后微信应该收到；日志里能看到完整内容。之后每天 09:00 / 12:00 / 18:00 自动发。
+
+### 3.4 必须知道的坑
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| 晚几分钟到二十分钟 | GitHub 免费 runner 的定时任务排队延迟 | 正常，无法根治 |
+| 两个月后突然不发了 | 仓库 60 天无提交，定时任务被自动停用 | 已带 `keepalive.yml` 每月自动提交一次；真停了去 Actions 页点「Enable workflow」 |
+| Actions 分钟数不够 | 私有仓库每月 2000 分钟免费额度 | 一天三次、每次约 40 秒，一个月只用 60 分钟，够用 |
+| 想改时间 | 改 `.github/workflows/daily.yml` 的 cron | cron 走 UTC，北京时间减 8 小时（09:00 → `0 1 * * *`） |
+
+---
+
+## 四、想在 QQ 上收
+
+个人 QQ 没有官方机器人接口，最稳的两条路：
+
+- **邮件 → QQ 邮箱**：配 `PUSH_CHANNELS=mail`，`MAIL_TO=你的QQ号@qq.com`，手机 QQ 会弹邮件提醒
+- **Qmsg酱**（<https://qmsg.zendee.cn/>）：加一个机器人 QQ 好友。本项目没内置（接口常变），按它的文档加 20 行渠道模块即可
 
 ---
 
@@ -259,11 +215,11 @@ WECOM_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...
 
 ```dotenv
 LLM_API_KEY=sk-...
-LLM_BASE_URL=https://api.deepseek.com/v1   # 也可换成通义/Moonshot/本地 Ollama
+LLM_BASE_URL=https://api.deepseek.com/v1   # 也可换通义 / Moonshot / 本地 Ollama
 LLM_MODEL=deepseek-chat
 ```
 
-它会把当天选出的标题丢给模型，让它写一句不超过 55 字的概括。成本约每次几厘钱。
+它会把当天选出的标题丢给模型，写一句不超过 55 字的概括。成本约每次几厘钱。
 
 ---
 
@@ -272,42 +228,42 @@ LLM_MODEL=deepseek-chat
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `CITY` | `北京` | 中文地名，自动地理编码；同名地多时可改用 `LATITUDE`/`LONGITUDE` |
-| `PUSH_CHANNELS` | 自动 | 逗号分隔：`wechat_mp` `mail` `serverchan` `pushplus` `wecom`。**留空则按已配好的凭据自动选一个**（优先 serverchan → pushplus → wecom → wechat_mp → mail） |
-| `SLOT` | `auto` | `morning`(09点) / `noon`(12点) / `evening`(18点)，`auto` 按当前时间判断 |
-| `NEWS_SOURCES` | 9 个源 | 可选：`ithome` `ifanr` `sspai` `solidot` `geekpark` `tmtpost` `gcores` `yystv` `jiemian` |
-| `NEWS_COUNT` | `10` | 选几条，建议 8~10 |
-| `NEWS_MIX` | 空 | **品类配额**，如 `ai:3,phone:3,game:1,intl:2,other:1`。留空则纯按分数选 |
-| `NEWS_LOOKBACK_HOURS` | 自动 | 回看多少小时。留空=跟着时段走（早 12h / 午 4h / 晚 6h），**这样三次推送不会整版重复**；填数字则固定用它 |
-| `EXTRAS` | 空 | 逗号分隔：`quote`(每日一句) `countdown`(倒数日) `fx`(汇率) |
-| `COUNTDOWN` | 空 | 形如 `2027-01-01\|元旦`，多个用逗号分隔 |
+| `PUSH_CHANNELS` | 自动 | 逗号分隔：`serverchan` `pushplus` `wechat_mp` `mail` `wecom`。**留空则按已配好的凭据自动选**（优先 serverchan → pushplus → wecom → wechat_mp → mail） |
+| `SLOT` | `auto` | `morning` / `noon` / `evening`，`auto` 按当前时间判断 |
+| `NEWS_SOURCES` | 9 个源 | `ithome` `ifanr` `sspai` `solidot` `geekpark` `tmtpost` `gcores` `yystv` `jiemian` |
+| `NEWS_COUNT` | `6` | 选几条，常用 15 |
+| `NEWS_MIX` | 空 | 品类配额，如 `phone:4`。留空则纯按分数选 |
+| `NEWS_LOOKBACK_HOURS` | 自动 | 回看多少小时。留空=跟着时段走（早 12h / 午 4h / 晚 6h）；填数字则固定 |
+| `EXTRAS` | 空 | `quote`(每日一句) `countdown`(倒数日) `fx`(汇率) |
+| `COUNTDOWN` | 空 | 形如 `2027-01-01\|元旦` |
 | `FX_PAIRS` | 空 | 形如 `USD:CNY,EUR:CNY` |
-| `WX_FIELDS` | 见上文 | 模板消息里依次填哪些字段，**必须和模板里的 `{{xxx.DATA}}` 一一对应** |
+| `WX_FIELDS` | 见上文 | 模板消息里依次填哪些字段，必须和模板里的 `{{xxx.DATA}}` 一一对应 |
 | `WX_LINK_URL` | 空 | 点开模板消息时跳转的地址 |
 
 命令行：
 
 ```bash
 python main.py              # 抓数据并推送
-python main.py --dry-run    # 只生成预览
+python main.py --dry-run    # 只生成预览，不发送
 python main.py --explain    # 打印选稿明细和各类前 4 名，不发送
 python main.py --test       # 发一条测试消息
 python main.py --only mail  # 只发某个渠道
 python main.py --show       # 顺带把完整 markdown 打到日志里
 ```
 
-### 三次推送为什么不会重复
+### 6.1 三次推送为什么不会重复
 
 一天发三次，如果每次都回看 24 小时，第二、三次基本就是第一份的复制。所以回看窗口跟着时段走：
 
-| 时段 | 回看 | 覆盖范围 |
-|---|---|---|
-| 09:00 早 | 12 小时 | 昨晚 21:00 → 今早 |
-| 12:00 午 | 4 小时 | 08:00 → 12:00 |
-| 18:00 晚 | 6 小时 | 12:00 → 18:00 |
+| 时段 | 回看 | 覆盖范围 | 实测候选 |
+|---|---|---|---|
+| 09:00 早 | 12 小时 | 昨晚 21:00 → 今早 | 103 条 |
+| 12:00 午 | 4 小时 | 08:00 → 12:00 | 42 条 |
+| 18:00 晚 | 6 小时 | 12:00 → 18:00 | 58 条 |
 
 货不够时（比如午间只有 20 条候选）会自动放宽到 12 小时、再放宽到 24 小时，不会因为窗口太窄而发不满。想固定窗口就设 `NEWS_LOOKBACK_HOURS=24`。
 
-### 品类配额（NEWS_MIX）
+### 6.2 品类配额（NEWS_MIX）
 
 不想让消息被某一类新闻刷屏，就按品类配份额：
 
@@ -317,12 +273,12 @@ NEWS_MIX=phone:4
 ```
 
 - 品类：`ai`(大模型) `phone`(手机/消费电子) `game`(游戏) `intl`(国际) `other`(其他)
-- 每个品类内部仍按「新鲜度 + 热门度」挑
-- **配额填不满时自动让位**：比如当天没有手机新闻，那 4 个位置就由其他类的高分新闻补上，不会硬凑
+- 每个品类内部按「新鲜度 + 热门度」挑
+- **配额填不满时自动让位**：比如当天没有手机新闻，那几个位置就由其他类的高分新闻补上，不会硬凑
 - **Epic / Steam 喜加一有保底**：当天只要有，必定先占一个位置（没有就不发游戏）
-- **手机类品牌白名单**：只收 苹果 / 华为 / 小米系（红米、Redmi）/ OPPO 系（一加、realme）/ vivo 系（iQOO），其余手机厂商一律不进
-- **手机类每个品牌最多 1 条**，所以不会出现「整版苹果」
-- 分类是按标题关键词判断的，用 `--explain` 末尾的「各品类前 4 名」可以核对分得准不准
+- **手机类品牌白名单**：只收 苹果 / 华为 / 小米系（红米、Redmi）/ OPPO 系（一加、realme）/ vivo 系（iQOO）
+- **手机类每个品牌最多 2 条**，不会出现「整版苹果」
+- 分类按标题关键词判断，用 `--explain` 末尾的「各品类前 4 名」可以核对准不准
 
 不写 `NEWS_MIX` 就退回纯分数排序。
 
@@ -330,52 +286,49 @@ NEWS_MIX=phone:4
 
 ## 七、常见问题
 
-**CMD 里敲 `python` 一点反应都没有 / 提示"不是内部或外部命令"**
-Windows 10/11 自带一个 **0 字节的 `python.exe` 占位符**（在 `%LOCALAPPDATA%\Microsoft\WindowsApps\`），敲它什么都不输出、直接返回错误码 9009——看起来就是"没反应"。这不是本项目的问题，任何 Python 程序都一样。
+**CMD 里敲 `python` 一点反应都没有**
+Windows 10/11 自带一个 **0 字节的 `python.exe` 占位符**（在 `%LOCALAPPDATA%\Microsoft\WindowsApps\`），敲它什么都不输出、直接返回 9009——看起来就是"没反应"。任何 Python 程序都一样。
 
-两个解决办法：
+1. **双击 `运行.cmd`**（推荐），它会逐个试探候选、自动跳过那个占位符
+2. 或装个真 Python：`winget install Python.Python.3.12`，装完**关掉 CMD 重开**
 
-1. **双击 `运行.cmd`**（推荐）。它逐个试探系统里的候选，实测能跑通 `--version` 的才用，会自动跳过那个 0 字节占位符。
-2. 装一个真 Python：`winget install Python.Python.3.12`，装完**关掉 CMD 重开**，`python` 就能用了。
+排查：`where python` 指向 `WindowsApps` 且文件大小是 0，就是这个问题。
 
-排查命令：`where python` 如果指向 `WindowsApps` 且文件大小是 0，就是上面这个情况。
+**方糖返回 code 非 0**
+密钥不对或额度用完了。免费会员每天 5 条，超了当天就不再发。
 
-**发送失败返回 40001 / 40013**
-AppID 或 AppSecret 不对。AppSecret 只显示一次，忘了就点「重置」再复制。
+**方糖消息里点标题跳不过去**
+标题链接是原文地址，部分站点（如爱范儿）的 RSS 带 utm 参数，跳转正常，只是地址较长。
 
-**返回 40003 或 43004**
-`openid` 不对，或者那个微信号根本没关注这个公众号。测试号要扫码关注后才会出现在用户列表里。
-
-**返回 47003 / 模板参数不合法**
-`WX_FIELDS` 里的字段名和模板里的 `{{xxx.DATA}}` 对不上，或者某字段超长。测试号每个字段上限约 120 字，程序已经按 100 字截断。
-
-**40164 / invalid ip**
-认证服务号开了 IP 白名单，而 GitHub runner 的 IP 是变的。关掉白名单，或改成本地计划任务跑。
-
-**订阅号能不能直接用？**
-不能。订阅号没有模板消息权限，只能群发图文（每天 1 次，且有内容审核）。要么用测试号，要么走邮件/Server酱。
+**推送成功了但我没看到**
+「方糖」提醒可能在微信的服务号通知里被折叠，或者你手机通知被静音了。打开微信搜「方糖」服务号能翻到历史消息。
 
 **抓不到新闻**
-免费 RSS 偶尔会抽风或改地址。`NEWS_SOURCES` 换几个源即可；日志里会打印哪个源失败。
+免费 RSS 偶尔抽风或改地址。`NEWS_SOURCES` 换几个源；日志会打印哪个源失败。
+
+**公众号报 40001 / 40013 / 40003 / 47003**
+`40001`/`40013` 是 AppID/AppSecret 错；`40003` 是 openid 错或没关注；`47003` 是 `WX_FIELDS` 和模板字段对不上。
 
 ---
 
 ## 八、想改内容？
 
-- 想加数据源：在 `pusher/news.py` 的 `SOURCES` 里加一行 `key: (显示名, RSS 地址)`，然后写进 `NEWS_SOURCES`。注意 `feed` 必须是合法 XML（36氪、品玩的 feed 实测会返回坏数据，已排除）。
-- 想改版式：`pusher/render.py`，三个函数分别管 markdown / 纯文本 / 公众号紧凑版。
-- 想改排序：`pusher/news.py` 的 `INTEREST`（关键词加权）和 `_quality_penalty`（压「日报/盘点」类大杂烩）。
+- **加数据源**：在 `pusher/news.py` 的 `SOURCES` 里加一行 `key: (显示名, RSS 地址)`，再写进 `NEWS_SOURCES`。feed 必须是合法 XML（36氪、品玩、观察者网实测会返回坏数据，已排除）
+- **改版式**：`pusher/render.py`，`render_markdown` / `render_plain` / `compact_fields` 各管一种输出
+- **改排序**：`pusher/news.py` 的 `INTEREST`（关键词加权）、`_quality_penalty`（压日报/股闻/活动预告）、`categorize`（品类判定）
+- **改配额**：`NEWS_MIX` 环境变量，不用动代码
 
 ## 目录结构
 
 ```
 daily-push/
-├── main.py                     入口 / CLI
+├── main.py                     入口 / CLI / 选稿编排
+├── 运行.cmd / run.ps1          Windows 启动器（自动找可用的 Python）
 ├── pusher/
 │   ├── config.py               环境变量 → 配置对象
 │   ├── http.py                 urllib 封装（超时、重试）
-│   ├── weather.py              Open-Meteo + WMO 天气码 + 穿衣提示
-│   ├── news.py                 RSS 抓取 / 去重 / 打分 / 选稿
+│   ├── weather.py              Open-Meteo 天气 + 空气质量 + WMO 码 + 穿衣提示
+│   ├── news.py                 RSS 抓取 / 去重 / 打分 / 分类 / 配额选稿
 │   ├── extras.py               每日一句、倒数日、汇率
 │   ├── llm.py                  可选的一句话总结
 │   ├── render.py               三种版式输出
@@ -388,4 +341,4 @@ daily-push/
 
 ## 合规提醒
 
-微信公众号模板消息的官方定位是「重要服务通知」，不支持营销内容。给自己的号推送属于自用，一般没人管；但如果你的公众号有真实粉丝、把模板消息当成资讯推送来用，有被限制模板权限的风险——那种场景请用邮件或 Server酱。
+公众号模板消息的官方定位是「重要服务通知」，不支持营销内容。给自己的号推送属于自用，一般没人管；但如果公众号有真实粉丝、把模板消息当资讯推送来用，有被限制模板权限的风险——那种场景请用方糖、PushPlus 或邮件。
