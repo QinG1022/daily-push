@@ -50,6 +50,38 @@ def resolve_slot(raw: str, tz: str) -> str:
     return "evening"
 
 
+# 回看窗口跟着时段走，三次推送才不会整版重复
+SLOT_WINDOWS = {
+    "morning": 12.0,   # 09:00 → 覆盖前晚 21:00 至今早
+    "noon": 4.0,       # 12:00 → 覆盖 08:00 至今
+    "evening": 6.0,    # 18:00 → 覆盖 12:00 至今
+}
+
+
+def load_pool(cfg: config_mod.Config, slot: str) -> tuple[list[news.NewsItem], float]:
+    """按时段窗口筛新闻；货不够就自动放宽，返回 (候选, 实际窗口小时数)。"""
+    wanted = cfg.news_lookback_hours if cfg.news_lookback_hours > 0 else SLOT_WINDOWS.get(slot, 24.0)
+
+    # 抓取上限先放到 24 小时，保证后备池够用
+    original = cfg.news_lookback_hours
+    cfg.news_lookback_hours = max(wanted, 24.0)
+    try:
+        pool = news.collect(cfg)
+    finally:
+        cfg.news_lookback_hours = original
+
+    subset: list[news.NewsItem] = []
+    used = wanted
+    for window in [wanted] + [w for w in (12.0, 24.0) if w > wanted]:
+        subset = [i for i in pool if i.age_hours <= window]
+        used = window
+        if len(subset) >= cfg.news_count:
+            break
+
+    cfg.news_lookback_hours = used
+    return subset, used
+
+
 # --------------------------------------------------------------------------- #
 # 组装内容
 # --------------------------------------------------------------------------- #
@@ -70,14 +102,17 @@ def build_digest(cfg: config_mod.Config) -> render.Digest:
     # ---- 新闻 ----
     picked: list[news.NewsItem] = []
     try:
-        pool = news.collect(cfg)
+        pool, window = load_pool(cfg, slot)
         if cfg.news_mix:
             picked = news.pick_mixed(pool, cfg.news_count, cfg.news_mix)
             mix_desc = " / ".join(f"{k}×{v}" for k, v in cfg.news_mix)
-            print(f"[news] 抓到 {len(pool)} 条候选，按配额 {mix_desc} 选出 {len(picked)} 条")
+            print(
+                f"[news] 回看 {window:.0f} 小时 · 候选 {len(pool)} 条"
+                f" · 按配额 {mix_desc} 选出 {len(picked)} 条"
+            )
         else:
             picked = news.pick(pool, cfg.news_count)
-            print(f"[news] 抓到 {len(pool)} 条候选，按分数选出 {len(picked)} 条")
+            print(f"[news] 回看 {window:.0f} 小时 · 候选 {len(pool)} 条 · 选出 {len(picked)} 条")
     except Exception as exc:
         print(f"[news] ❌ 获取失败：{exc}")
 
@@ -162,10 +197,10 @@ def print_compact(digest: render.Digest) -> None:
 def explain_selection(cfg: config_mod.Config) -> int:
     """打印选稿明细和各品类前几名，方便调关键词与配额。不发送任何消息。"""
     print("[explain] 抓取并排序，不发送…")
-    pool = news.collect(cfg)
+    pool, window = load_pool(cfg, resolve_slot(cfg.slot, cfg.timezone))
 
     print(
-        f"\n候选 {len(pool)} 条 · 回看 {cfg.news_lookback_hours:.0f} 小时"
+        f"\n候选 {len(pool)} 条 · 回看 {window:.0f} 小时"
         f" · 目标 {cfg.news_count} 条"
     )
 
@@ -246,8 +281,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     digest = build_test_digest(cfg) if args.test else build_digest(cfg)
-    path = save_preview(digest)
-    print(f"[main] 预览已写入 {path}")
+    # 测试消息不覆盖正式预览文件，免得 latest.md 被一条「测试」冲掉
+    if not digest.is_test:
+        path = save_preview(digest)
+        print(f"[main] 预览已写入 {path}")
 
     if args.show or args.dry_run:
         # 终端里打纯文本版（没有 ** / ## 这些 markdown 记号），文件里留完整 markdown

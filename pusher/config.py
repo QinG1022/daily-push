@@ -130,7 +130,7 @@ class Config:
     # 数据源
     news_sources: list[str] = field(default_factory=list)
     news_count: int = 6
-    news_lookback_hours: float = 24.0
+    news_lookback_hours: float = 0.0
     # 品类配额，例如 [("ai", 3), ("phone", 3), ("game", 1)]；为空则纯按分数选
     news_mix: list[tuple[str, int]] = field(default_factory=list)
 
@@ -204,7 +204,8 @@ def load_config(slot_override: str | None = None) -> Config:
         slot=slot_override or _env("SLOT", "auto"),
         news_sources=_env_list("NEWS_SOURCES", DEFAULT_SOURCES),
         news_count=max(1, _env_int("NEWS_COUNT", 6)),
-        news_lookback_hours=_env_float("NEWS_LOOKBACK_HOURS", 24.0),
+        news_lookback_hours=_env_float("NEWS_LOOKBACK_HOURS", 0.0),
+        # 0 = 自动：按时段决定回看窗口（早 12h / 午 4h / 晚 6h），避免三次推送重复
         news_mix=_parse_mix(_env("NEWS_MIX")),
         channels=_env_list("PUSH_CHANNELS", _default_channels()),
         extras=_env_list("EXTRAS", ""),

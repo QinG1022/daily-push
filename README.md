@@ -277,7 +277,7 @@ LLM_MODEL=deepseek-chat
 | `NEWS_SOURCES` | 9 个源 | 可选：`ithome` `ifanr` `sspai` `solidot` `geekpark` `tmtpost` `gcores` `yystv` `jiemian` |
 | `NEWS_COUNT` | `10` | 选几条，建议 8~10 |
 | `NEWS_MIX` | 空 | **品类配额**，如 `ai:3,phone:3,game:1,intl:2,other:1`。留空则纯按分数选 |
-| `NEWS_LOOKBACK_HOURS` | `24` | 只取最近多少小时的新闻 |
+| `NEWS_LOOKBACK_HOURS` | 自动 | 回看多少小时。留空=跟着时段走（早 12h / 午 4h / 晚 6h），**这样三次推送不会整版重复**；填数字则固定用它 |
 | `EXTRAS` | 空 | 逗号分隔：`quote`(每日一句) `countdown`(倒数日) `fx`(汇率) |
 | `COUNTDOWN` | 空 | 形如 `2027-01-01\|元旦`，多个用逗号分隔 |
 | `FX_PAIRS` | 空 | 形如 `USD:CNY,EUR:CNY` |
@@ -294,6 +294,18 @@ python main.py --test       # 发一条测试消息
 python main.py --only mail  # 只发某个渠道
 python main.py --show       # 顺带把完整 markdown 打到日志里
 ```
+
+### 三次推送为什么不会重复
+
+一天发三次，如果每次都回看 24 小时，第二、三次基本就是第一份的复制。所以回看窗口跟着时段走：
+
+| 时段 | 回看 | 覆盖范围 |
+|---|---|---|
+| 09:00 早 | 12 小时 | 昨晚 21:00 → 今早 |
+| 12:00 午 | 4 小时 | 08:00 → 12:00 |
+| 18:00 晚 | 6 小时 | 12:00 → 18:00 |
+
+货不够时（比如午间只有 20 条候选）会自动放宽到 12 小时、再放宽到 24 小时，不会因为窗口太窄而发不满。想固定窗口就设 `NEWS_LOOKBACK_HOURS=24`。
 
 ### 品类配额（NEWS_MIX）
 
