@@ -1,0 +1,30 @@
+name: 保活
+
+# GitHub 有个坑：仓库连续 60 天没有提交，定时任务会被自动停掉。
+# 这个 workflow 每月提交一次「心跳」文件，让仓库保持活跃。
+on:
+  schedule:
+    - cron: "0 3 1 * *"   # 每月 1 号 11:00（北京时间）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 提交心跳
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p .github
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/heartbeat.txt
+          git add .github/heartbeat.txt
+          if git diff --cached --quiet; then
+            echo "无变化，跳过"
+          else
+            git commit -m "chore: keepalive $(date -u +%Y-%m)"
+            git push
+          fi

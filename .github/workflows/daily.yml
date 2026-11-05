@@ -1,0 +1,69 @@
+name: 每日推送
+
+# 一天三次：09:00 / 12:00 / 18:00（北京时间 = UTC+8）
+# 注意：GitHub 的 cron 走 UTC，且高峰期会延迟 5~20 分钟，属正常现象
+on:
+  schedule:
+    - cron: "0 1 * * *"    # 09:00
+    - cron: "0 4 * * *"    # 12:00
+    - cron: "0 10 * * *"   # 18:00
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "时段：auto / morning / noon / evening"
+        required: false
+        default: "auto"
+
+# 三次定时不要互相顶掉
+concurrency:
+  group: daily-push
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 抓数据并推送
+        env:
+          # ---- 手动触发时用输入值，定时触发时自动按当地时间判断时段 ----
+          SLOT: ${{ github.event.inputs.slot || 'auto' }}
+
+          # ---- 仓库变量（Settings → Secrets and variables → Actions → Variables）----
+          PUSH_CHANNELS: ${{ vars.PUSH_CHANNELS }}
+          CITY: ${{ vars.CITY }}
+          NEWS_COUNT: ${{ vars.NEWS_COUNT }}
+          NEWS_SOURCES: ${{ vars.NEWS_SOURCES }}
+          EXTRAS: ${{ vars.EXTRAS }}
+          COUNTDOWN: ${{ vars.COUNTDOWN }}
+          FX_PAIRS: ${{ vars.FX_PAIRS }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+
+          # ---- 密钥（Settings → Secrets and variables → Actions → Secrets）----
+          WX_APPID: ${{ secrets.WX_APPID }}
+          WX_APPSECRET: ${{ secrets.WX_APPSECRET }}
+          WX_TEMPLATE_ID: ${{ secrets.WX_TEMPLATE_ID }}
+          WX_OPENID: ${{ secrets.WX_OPENID }}
+
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+
+          SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: python main.py --show

@@ -1,0 +1,14 @@
+# 统一行尾，避免 Windows / Linux 之间来回改
+* text=auto
+
+# 代码与配置：仓库里统一用 LF
+*.py    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+
+# Windows 脚本必须 CRLF，否则 cmd.exe 解析可能出问题（尤其是 goto/label）
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
+*.ps1   text eol=crlf
