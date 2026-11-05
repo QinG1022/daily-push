@@ -66,6 +66,23 @@ def _env_list(name: str, default: str = "") -> list[str]:
     return [part.strip() for part in raw.split(",") if part.strip()]
 
 
+def _parse_mix(raw: str) -> list[tuple[str, int]]:
+    """解析 `ai:3,phone:3,game:1` 这种品类配额。"""
+    out: list[tuple[str, int]] = []
+    for part in raw.replace(";", ",").replace("\n", ",").split(","):
+        part = part.strip()
+        if not part or ":" not in part:
+            continue
+        name, _, num = part.partition(":")
+        try:
+            quota = int(num.strip())
+        except ValueError:
+            continue
+        if quota > 0 and name.strip():
+            out.append((name.strip().lower(), quota))
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # 各渠道配置
 # --------------------------------------------------------------------------- #
@@ -113,7 +130,9 @@ class Config:
     # 数据源
     news_sources: list[str] = field(default_factory=list)
     news_count: int = 6
-    news_lookback_hours: float = 30.0
+    news_lookback_hours: float = 24.0
+    # 品类配额，例如 [("ai", 3), ("phone", 3), ("game", 1)]；为空则纯按分数选
+    news_mix: list[tuple[str, int]] = field(default_factory=list)
 
     # 推送
     channels: list[str] = field(default_factory=list)
@@ -153,7 +172,7 @@ class Config:
         return broken
 
 
-DEFAULT_SOURCES = "ithome,ifanr,sspai,solidot,geekpark,tmtpost"
+DEFAULT_SOURCES = "ithome,ifanr,sspai,solidot,geekpark,tmtpost,gcores,yystv,jiemian"
 
 
 def _default_channels() -> str:
@@ -185,7 +204,8 @@ def load_config(slot_override: str | None = None) -> Config:
         slot=slot_override or _env("SLOT", "auto"),
         news_sources=_env_list("NEWS_SOURCES", DEFAULT_SOURCES),
         news_count=max(1, _env_int("NEWS_COUNT", 6)),
-        news_lookback_hours=_env_float("NEWS_LOOKBACK_HOURS", 30.0),
+        news_lookback_hours=_env_float("NEWS_LOOKBACK_HOURS", 24.0),
+        news_mix=_parse_mix(_env("NEWS_MIX")),
         channels=_env_list("PUSH_CHANNELS", _default_channels()),
         extras=_env_list("EXTRAS", ""),
         countdowns=_env_list("COUNTDOWN", ""),

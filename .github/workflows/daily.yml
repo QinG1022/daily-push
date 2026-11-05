@@ -43,6 +43,7 @@ jobs:
           PUSH_CHANNELS: ${{ vars.PUSH_CHANNELS }}
           CITY: ${{ vars.CITY }}
           NEWS_COUNT: ${{ vars.NEWS_COUNT }}
+          NEWS_MIX: ${{ vars.NEWS_MIX }}
           NEWS_SOURCES: ${{ vars.NEWS_SOURCES }}
           EXTRAS: ${{ vars.EXTRAS }}
           COUNTDOWN: ${{ vars.COUNTDOWN }}

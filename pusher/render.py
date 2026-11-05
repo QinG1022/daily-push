@@ -14,7 +14,7 @@ from html import escape
 
 from .extras import Extra
 from .news import NewsItem
-from .weather import Weather, format_forecast_lines
+from .weather import Weather, aqi_level, format_forecast_lines, uv_level
 
 SLOT_TITLES = {
     "morning": "早间科技速递",
@@ -102,19 +102,24 @@ def render_markdown(d: Digest) -> str:
 
     if d.weather:
         w = d.weather
-        t = w.today
-        if t:
-            lines.append(f"**{w.city}** {t.emoji} {t.text}　{t.range_text}　降水 {t.pop}%")
-        else:
-            lines.append(f"**{w.city}** {w.now_emoji} {w.now_text}　{w.current_temp:.0f}℃")
+        lines.append(f"### 🌤 天气 · {w.city}")
         lines.append("")
-        # 用列表而不是普通换行：markdown 的单个换行会被合并成一段
+        for day in w.days[:3]:
+            lines.append(f"- {day.label} {day.emoji} {day.text}　{day.range_text}　降水 {day.pop}%")
         lines.append(
             f"- 现在 {w.current_temp:.0f}℃（体感 {w.feels_like:.0f}℃）"
             f"· 湿度 {w.humidity}% · 风 {w.wind:.0f}km/h"
         )
-        for day in w.days[1:3]:
-            lines.append(f"- {day.label} {day.emoji}{day.text} {day.range_text} 降水{day.pop}%")
+        today = w.today
+        if today and today.sunrise:
+            extra = [
+                f"日出 {today.sunrise}",
+                f"日落 {today.sunset}",
+                f"紫外线 {today.uv:.0f}（{uv_level(today.uv)}）",
+            ]
+            if w.aqi is not None:
+                extra.append(f"AQI {w.aqi}（{aqi_level(w.aqi)}）")
+            lines.append("- " + " · ".join(extra))
         lines.append("")
     else:
         lines.append("_天气数据暂不可用_")
@@ -183,8 +188,23 @@ def render_plain(d: Digest) -> str:
     lines = [d.full_title, "=" * 30, ""]
     if d.weather:
         w = d.weather
-        lines.append(f"{w.city}｜{w.comfort_line()}")
-        lines.extend(format_forecast_lines(w))
+        lines.append(f"【天气】{w.city}")
+        for day in w.days[:3]:
+            lines.append(f"  {day.label} {day.emoji}{day.text} {day.range_text} 降水{day.pop}%")
+        lines.append(
+            f"  现在 {w.current_temp:.0f}℃（体感 {w.feels_like:.0f}℃）"
+            f"· 湿度 {w.humidity}% · 风 {w.wind:.0f}km/h"
+        )
+        today = w.today
+        if today and today.sunrise:
+            extra = [
+                f"日出 {today.sunrise}",
+                f"日落 {today.sunset}",
+                f"紫外线 {today.uv:.0f}",
+            ]
+            if w.aqi is not None:
+                extra.append(f"AQI {w.aqi} {aqi_level(w.aqi)}")
+            lines.append("  " + " · ".join(extra))
         lines.append("")
     if d.news:
         lines.append(f"【近 {d.lookback_hours:.0f} 小时要闻】")

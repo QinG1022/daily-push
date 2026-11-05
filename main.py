@@ -71,8 +71,13 @@ def build_digest(cfg: config_mod.Config) -> render.Digest:
     picked: list[news.NewsItem] = []
     try:
         pool = news.collect(cfg)
-        picked = news.pick(pool, cfg.news_count)
-        print(f"[news] 抓到 {len(pool)} 条候选，选出 {len(picked)} 条")
+        if cfg.news_mix:
+            picked = news.pick_mixed(pool, cfg.news_count, cfg.news_mix)
+            mix_desc = " / ".join(f"{k}×{v}" for k, v in cfg.news_mix)
+            print(f"[news] 抓到 {len(pool)} 条候选，按配额 {mix_desc} 选出 {len(picked)} 条")
+        else:
+            picked = news.pick(pool, cfg.news_count)
+            print(f"[news] 抓到 {len(pool)} 条候选，按分数选出 {len(picked)} 条")
     except Exception as exc:
         print(f"[news] ❌ 获取失败：{exc}")
 
@@ -152,6 +157,68 @@ def print_compact(digest: render.Digest) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# 选稿明细
+# --------------------------------------------------------------------------- #
+def explain_selection(cfg: config_mod.Config) -> int:
+    """打印选稿明细和各品类前几名，方便调关键词与配额。不发送任何消息。"""
+    print("[explain] 抓取并排序，不发送…")
+    pool = news.collect(cfg)
+
+    print(
+        f"\n候选 {len(pool)} 条 · 回看 {cfg.news_lookback_hours:.0f} 小时"
+        f" · 目标 {cfg.news_count} 条"
+    )
+
+    def label(cat: str) -> str:
+        return news.CATEGORY_LABELS.get(cat, cat)
+
+    buckets: dict[str, list[news.NewsItem]] = {}
+    for item in pool:
+        buckets.setdefault(news.categorize(item.title), []).append(item)
+
+    summary = sorted(buckets.items(), key=lambda kv: -len(kv[1]))
+    print("各类候选：" + "  ".join(f"{label(k)}={len(v)}" for k, v in summary))
+
+    if cfg.news_mix:
+        desc = " / ".join(f"{label(k)}×{v}" for k, v in cfg.news_mix)
+        print(f"\n=== 按配额推送：{desc} ===")
+        picked = news.pick_mixed(pool, cfg.news_count, cfg.news_mix)
+    else:
+        print("\n=== 纯按分数推送（未设 NEWS_MIX） ===")
+        picked = news.pick(pool, cfg.news_count)
+
+    for idx, item in enumerate(picked, 1):
+        print(
+            f"{idx:2d}. {item.age_hours:5.1f}h {item.score:5.2f} "
+            f"[{label(news.categorize(item.title))}] "
+            f"{item.source_name}  {item.clean_title()[:30]}"
+        )
+
+    cat_sum: dict[str, int] = {}
+    src_sum: dict[str, int] = {}
+    for item in picked:
+        cat = label(news.categorize(item.title))
+        cat_sum[cat] = cat_sum.get(cat, 0) + 1
+        src_sum[item.source_name] = src_sum.get(item.source_name, 0) + 1
+    print("\n品类分布：" + "  ".join(f"{k}={v}" for k, v in cat_sum.items()))
+    print("来源分布：" + "  ".join(f"{k}={v}" for k, v in src_sum.items()))
+
+    print("\n=== 各品类前 4 名（核对分类是否准确） ===")
+    for cat, _ in (cfg.news_mix or [("ai", 0), ("phone", 0), ("game", 0), ("intl", 0)]):
+        print(f"\n【{label(cat)}】")
+        items = buckets.get(cat, [])[:4]
+        if not items:
+            print("  无")
+            continue
+        for idx, item in enumerate(items, 1):
+            print(
+                f"  {idx}. {item.age_hours:5.1f}h {item.score:5.2f} "
+                f"{item.source_name}  {item.clean_title()[:32]}"
+            )
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 # 入口
 # --------------------------------------------------------------------------- #
 def main(argv: list[str] | None = None) -> int:
@@ -162,9 +229,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--test", action="store_true", help="发送测试消息")
     parser.add_argument("--only", default=None, help="只发指定渠道，逗号分隔")
     parser.add_argument("--show", action="store_true", help="打印完整 markdown 预览")
+    parser.add_argument("--explain", action="store_true", help="打印选稿明细，不发送")
     args = parser.parse_args(argv)
 
     cfg = config_mod.load_config(args.slot)
+
+    if args.explain:
+        return explain_selection(cfg)
 
     broken = cfg.missing_channels()
     if broken:

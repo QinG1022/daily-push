@@ -57,6 +57,58 @@ def describe(code: int) -> tuple[str, str]:
     return WMO.get(int(code), ("未知", "🌡"))
 
 
+def uv_level(uv: float) -> str:
+    if uv < 3:
+        return "低"
+    if uv < 6:
+        return "中等"
+    if uv < 8:
+        return "高"
+    if uv < 11:
+        return "很高"
+    return "极高"
+
+
+_AQI_LEVELS = (
+    (50, "优"),
+    (100, "良"),
+    (150, "轻度污染"),
+    (200, "中度污染"),
+    (300, "重度污染"),
+)
+
+
+def aqi_level(aqi: int) -> str:
+    for limit, name in _AQI_LEVELS:
+        if aqi <= limit:
+            return name
+    return "严重污染"
+
+
+def _hm(iso: str) -> str:
+    """'2026-11-06T06:43' -> '06:43'"""
+    return iso[11:16] if len(iso) >= 16 else ""
+
+
+def fetch_aqi(lat: float, lon: float, tz: str) -> int | None:
+    """空气质量单独一个接口，失败就返回 None，不影响主流程。"""
+    try:
+        url = http.with_query(
+            "https://air-quality-api.open-meteo.com/v1/air-quality",
+            {
+                "latitude": f"{lat:.4f}",
+                "longitude": f"{lon:.4f}",
+                "current": "us_aqi",
+                "timezone": tz,
+            },
+        )
+        data = http.get_json(url, timeout=12, retries=1)
+        value = (data.get("current") or {}).get("us_aqi")
+        return int(value) if value is not None else None
+    except Exception:
+        return None
+
+
 @dataclass
 class DayForecast:
     day: date
@@ -69,6 +121,8 @@ class DayForecast:
     pop: int
     precip: float
     uv: float
+    sunrise: str = ""
+    sunset: str = ""
 
     @property
     def range_text(self) -> str:
@@ -85,6 +139,7 @@ class Weather:
     now_code: int
     days: list[DayForecast] = field(default_factory=list)
     dress: str = ""
+    aqi: int | None = None
 
     # ------------------------------------------------------------------ #
     @property
@@ -224,7 +279,8 @@ def fetch_weather(cfg: Config) -> Weather:
             "current": "temperature_2m,relative_humidity_2m,apparent_temperature,"
                        "weather_code,wind_speed_10m",
             "daily": "weather_code,temperature_2m_max,temperature_2m_min,"
-                     "precipitation_probability_max,precipitation_sum,uv_index_max",
+                     "precipitation_probability_max,precipitation_sum,uv_index_max,"
+                     "sunrise,sunset",
             "timezone": cfg.timezone,
             "forecast_days": 3,
         },
@@ -249,6 +305,8 @@ def fetch_weather(cfg: Config) -> Weather:
                 pop=int((daily.get("precipitation_probability_max") or [0])[idx] or 0),
                 precip=float((daily.get("precipitation_sum") or [0])[idx] or 0),
                 uv=float((daily.get("uv_index_max") or [0])[idx] or 0),
+                sunrise=_hm((daily.get("sunrise") or [""])[idx] or ""),
+                sunset=_hm((daily.get("sunset") or [""])[idx] or ""),
             )
         )
     feels = float(cur.get("apparent_temperature", cur.get("temperature_2m", 0)) or 0)
@@ -261,6 +319,7 @@ def fetch_weather(cfg: Config) -> Weather:
         now_code=int(cur.get("weather_code", 0) or 0),
         days=days,
         dress=dress_advice(feels),
+        aqi=fetch_aqi(lat, lon, cfg.timezone),
     )
 
 

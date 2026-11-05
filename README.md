@@ -274,9 +274,10 @@ LLM_MODEL=deepseek-chat
 | `CITY` | `北京` | 中文地名，自动地理编码；同名地多时可改用 `LATITUDE`/`LONGITUDE` |
 | `PUSH_CHANNELS` | 自动 | 逗号分隔：`wechat_mp` `mail` `serverchan` `pushplus` `wecom`。**留空则按已配好的凭据自动选一个**（优先 serverchan → pushplus → wecom → wechat_mp → mail） |
 | `SLOT` | `auto` | `morning`(09点) / `noon`(12点) / `evening`(18点)，`auto` 按当前时间判断 |
-| `NEWS_SOURCES` | 6 个源 | 可选：`ithome` `ifanr` `sspai` `solidot` `geekpark` `tmtpost` |
-| `NEWS_COUNT` | `6` | 选几条，建议 4~8 |
-| `NEWS_LOOKBACK_HOURS` | `30` | 只取最近多少小时的新闻（30 小时 ≈ 昨天全天 + 今早） |
+| `NEWS_SOURCES` | 9 个源 | 可选：`ithome` `ifanr` `sspai` `solidot` `geekpark` `tmtpost` `gcores` `yystv` `jiemian` |
+| `NEWS_COUNT` | `10` | 选几条，建议 8~10 |
+| `NEWS_MIX` | 空 | **品类配额**，如 `ai:3,phone:3,game:1,intl:2,other:1`。留空则纯按分数选 |
+| `NEWS_LOOKBACK_HOURS` | `24` | 只取最近多少小时的新闻 |
 | `EXTRAS` | 空 | 逗号分隔：`quote`(每日一句) `countdown`(倒数日) `fx`(汇率) |
 | `COUNTDOWN` | 空 | 形如 `2027-01-01\|元旦`，多个用逗号分隔 |
 | `FX_PAIRS` | 空 | 形如 `USD:CNY,EUR:CNY` |
@@ -288,10 +289,30 @@ LLM_MODEL=deepseek-chat
 ```bash
 python main.py              # 抓数据并推送
 python main.py --dry-run    # 只生成预览
+python main.py --explain    # 打印选稿明细和各类前 4 名，不发送
 python main.py --test       # 发一条测试消息
 python main.py --only mail  # 只发某个渠道
 python main.py --show       # 顺带把完整 markdown 打到日志里
 ```
+
+### 品类配额（NEWS_MIX）
+
+不想让消息被某一类新闻刷屏，就按品类配份额：
+
+```dotenv
+NEWS_COUNT=15
+NEWS_MIX=phone:4
+```
+
+- 品类：`ai`(大模型) `phone`(手机/消费电子) `game`(游戏) `intl`(国际) `other`(其他)
+- 每个品类内部仍按「新鲜度 + 热门度」挑
+- **配额填不满时自动让位**：比如当天没有手机新闻，那 4 个位置就由其他类的高分新闻补上，不会硬凑
+- **Epic / Steam 喜加一有保底**：当天只要有，必定先占一个位置（没有就不发游戏）
+- **手机类品牌白名单**：只收 苹果 / 华为 / 小米系（红米、Redmi）/ OPPO 系（一加、realme）/ vivo 系（iQOO），其余手机厂商一律不进
+- **手机类每个品牌最多 1 条**，所以不会出现「整版苹果」
+- 分类是按标题关键词判断的，用 `--explain` 末尾的「各品类前 4 名」可以核对分得准不准
+
+不写 `NEWS_MIX` 就退回纯分数排序。
 
 ---
 
