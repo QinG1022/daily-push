@@ -87,7 +87,10 @@ copy .env.example .env      # macOS/Linux 用 cp
 >
 > 想要零额度顾虑就换 PushPlus（约 200 条/天），见 2.3。
 
-### 2.2 可选：公众号模板消息
+### 2.2 备用：公众号模板消息（默认不启用）
+
+> **这一节默认用不上。** 项目按方糖（2.1）设计，`.env` 里所有 `WX_*` 配置**已注释停用**，代码只是把渠道留在那里备用。
+> 想让消息显示成「你自己的公众号卡片」时再回来看这一节。
 
 如果你已经有**接口测试号**或**认证服务号**，也能推到公众号卡片。但要知道它的天花板：
 
@@ -104,10 +107,10 @@ copy .env.example .env      # macOS/Linux 用 cp
 
 > 关键事实：模板消息是**服务号**能力，订阅号没有。而个人主体注册的公众号一律是订阅号、又不能做微信认证，所以个人号永远拿不到这个权限。订阅号和服务号注册后也不能互转。
 
-**用接口测试号的流程**：
+**用接口测试号的流程**（要启用时才做）：
 
 1. 打开 <https://mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login> 扫码登录
-2. 页面上的 **appID** / **appsecret** → 填 `.env` 的 `WX_APPID` / `WX_APPSECRET`
+2. 页面上的 **appID** / **appsecret** → 填 `.env` 的 `WX_APPID` / `WX_APPSECRET`（先把行首的 `# [已停用]` 去掉）
 3. 扫页面上的**测试号二维码**关注它，然后在「用户列表」里找到你的 `openid` → 填 `WX_OPENID`
 4. 「新增测试模板」，标题写 `每日速递`，内容：
 
@@ -119,7 +122,9 @@ copy .env.example .env      # macOS/Linux 用 cp
    {{remark.DATA}}
    ```
 
-   保存后得到**模板 ID** → 填 `WX_TEMPLATE_ID`，并把 `PUSH_CHANNELS` 改成 `wechat_mp`
+   保存后得到**模板 ID** → 填 `WX_TEMPLATE_ID`
+5. `PUSH_CHANNELS` 改成 `wechat_mp`（想两个都收就写 `serverchan,wechat_mp`）
+6. 如果跑在 GitHub Actions 上，还要把这 4 个值加回 Secrets
 
 > ⚠️ **IP 白名单**：认证服务号如果开了 IP 白名单，GitHub Actions 的 IP 每次都不一样，会直接失败。测试号没这个问题。
 
@@ -237,8 +242,8 @@ LLM_MODEL=deepseek-chat
 | `EXTRAS` | 空 | `quote`(每日一句) `countdown`(倒数日) `fx`(汇率) |
 | `COUNTDOWN` | 空 | 形如 `2027-01-01\|元旦` |
 | `FX_PAIRS` | 空 | 形如 `USD:CNY,EUR:CNY` |
-| `WX_FIELDS` | 见上文 | 模板消息里依次填哪些字段，必须和模板里的 `{{xxx.DATA}}` 一一对应 |
-| `WX_LINK_URL` | 空 | 点开模板消息时跳转的地址 |
+| `WX_FIELDS` | 空 | ⚠️ 仅在启用公众号时生效。模板消息里依次填哪些字段，必须和模板里的 `{{xxx.DATA}}` 一一对应 |
+| `WX_LINK_URL` | 空 | ⚠️ 仅在启用公众号时生效。点开模板消息时跳转的地址 |
 
 命令行：
 
@@ -250,6 +255,8 @@ python main.py --test       # 发一条测试消息
 python main.py --only mail  # 只发某个渠道
 python main.py --show       # 顺带把完整 markdown 打到日志里
 ```
+
+> `--dry-run` / `--show` 默认只打正文。只有 `PUSH_CHANNELS` 里包含 `wechat_mp` 时，才会额外打印公众号模板字段。
 
 ### 6.1 三次推送为什么不会重复
 
@@ -306,7 +313,7 @@ Windows 10/11 自带一个 **0 字节的 `python.exe` 占位符**（在 `%LOCALA
 **抓不到新闻**
 免费 RSS 偶尔抽风或改地址。`NEWS_SOURCES` 换几个源；日志会打印哪个源失败。
 
-**公众号报 40001 / 40013 / 40003 / 47003**
+**公众号报错（40001 / 40013 / 40003 / 47003）——只在启用了公众号时才会遇到**
 `40001`/`40013` 是 AppID/AppSecret 错；`40003` 是 openid 错或没关注；`47003` 是 `WX_FIELDS` 和模板字段对不上。
 
 ---

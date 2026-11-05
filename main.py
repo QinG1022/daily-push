@@ -290,7 +290,9 @@ def main(argv: list[str] | None = None) -> int:
         # 终端里打纯文本版（没有 ** / ## 这些 markdown 记号），文件里留完整 markdown
         print("\n========== 消息正文 ==========")
         print(render.render_plain(digest))
-        print_compact(digest)
+        # 只有真在用公众号模板消息时才需要看这些字段
+        if "wechat_mp" in cfg.channels:
+            print_compact(digest)
 
     if args.dry_run:
         print("[main] --dry-run：未发送。")
