@@ -116,6 +116,7 @@ def build_test_digest(cfg: config_mod.Config) -> render.Digest:
         generated=now,
         slot=resolve_slot(cfg.slot, cfg.timezone),
         city=cfg.city,
+        is_test=True,
         raw_fields={
             "title": "daily-push 测试",
             "weather": "推送链路正常 ✅",
@@ -136,7 +137,9 @@ def save_preview(digest: render.Digest) -> Path:
     md = render.render_markdown(digest)
     (OUT_DIR / f"preview-{digest.slot}.md").write_text(md, encoding="utf-8")
     (OUT_DIR / "latest.md").write_text(md, encoding="utf-8")
-    (OUT_DIR / "latest.html").write_text(render.render_html(digest), encoding="utf-8")
+    (OUT_DIR / "latest.html").write_text(render.render_page(digest), encoding="utf-8")
+    # GitHub Pages 发布的入口页
+    (OUT_DIR / "index.html").write_text(render.render_page(digest), encoding="utf-8")
     return OUT_DIR / "latest.md"
 
 

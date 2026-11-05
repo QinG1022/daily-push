@@ -25,6 +25,9 @@ WEEKDAYS = "一二三四五六日"
 
 # 公众号模板消息单字段上限约 120 字，留点余量
 WX_FIELD_LIMIT = 100
+# 微信卡片实际只显示一行（约 26 个汉字），超出的会被系统以「…」截断，
+# 所以这里主动按一行来收，避免出现半截词
+WX_LINE_LIMIT = 26
 
 
 @dataclass
@@ -39,6 +42,8 @@ class Digest:
     lookback_hours: float = 24.0
     # --test 时直接给定字段，跳过正常渲染
     raw_fields: dict[str, str] | None = None
+    # --test 时给所有渠道发同一条简短测试消息
+    is_test: bool = False
 
     # ------------------------------------------------------------------ #
     @property
@@ -51,6 +56,8 @@ class Digest:
 
     @property
     def title(self) -> str:
+        if self.is_test:
+            return "daily-push 测试"
         return f"{self.local.month}月{self.local.day}日 {SLOT_TITLES.get(self.slot, '科技速递')}"
 
     @property
@@ -81,6 +88,15 @@ def _news_line(item: NewsItem, idx: int, *, with_link: bool) -> str:
 # Markdown（邮件 / 推送服务）
 # --------------------------------------------------------------------------- #
 def render_markdown(d: Digest) -> str:
+    if d.is_test:
+        return (
+            "## daily-push 测试消息\n\n"
+            "✅ 链路正常\n\n"
+            "如果你看到这条，说明这个渠道已经配好了，之后会按计划自动发送。\n\n"
+            "---\n"
+            f"测试时间 {d.local:%Y-%m-%d %H:%M}\n"
+        )
+
     lines: list[str] = [f"## {d.full_title}", ""]
 
     if d.weather:
@@ -145,6 +161,15 @@ def render_markdown(d: Digest) -> str:
 # 纯文本（QQ / 短信 / 企业微信 text）
 # --------------------------------------------------------------------------- #
 def render_plain(d: Digest) -> str:
+    if d.is_test:
+        return (
+            "daily-push 测试消息\n"
+            "====================\n\n"
+            "✅ 链路正常\n\n"
+            "如果你看到这条，说明这个渠道已经配好了，之后会按计划自动发送。\n\n"
+            f"测试时间 {d.local:%Y-%m-%d %H:%M}\n"
+        )
+
     lines = [d.full_title, "=" * 30, ""]
     if d.weather:
         w = d.weather
@@ -239,9 +264,28 @@ def render_html(d: Digest) -> str:
     return "".join(parts)
 
 
+def render_page(d: Digest) -> str:
+    """独立网页版：公众号模板消息的 url 指向这个页面，点开就是完整内容。"""
+    return (
+        '<!doctype html><html lang="zh-CN"><head>'
+        '<meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f"<title>{escape(d.full_title)}</title>"
+        '</head><body style="margin:0;background:#fafafa">'
+        f"{render_html(d)}</body></html>"
+    )
+
+
 # --------------------------------------------------------------------------- #
 # 公众号模板消息字段
 # --------------------------------------------------------------------------- #
+def _topic(text: str, limit: int = 11) -> str:
+    """标题压成一小段主题词，够一行显示又不至于看不懂。"""
+    core = text.split("：")[0].split("｜")[0].strip()
+    core = core.split("，")[0].strip() or text.strip()
+    return core if len(core) <= limit else core[: limit - 1].rstrip() + "…"
+
+
 def compact_fields(d: Digest) -> dict[str, str]:
     """键名与公众号模板里的 {{xxx.DATA}} 对应。"""
     if d.raw_fields is not None:
@@ -253,37 +297,27 @@ def compact_fields(d: Digest) -> dict[str, str]:
     if w and w.today:
         t = w.today
         tomorrow = w.days[1] if len(w.days) > 1 else None
+        short_city = w.city.split("（")[0]
         fields["weather"] = truncate(
-            f"{w.city} {t.emoji}{t.text} {t.range_text} 降水{t.pop}%", WX_FIELD_LIMIT
+            f"{short_city} {t.emoji}{t.text} {t.range_text} 降水{t.pop}%", WX_LINE_LIMIT
         )
         tail = f" · 明天{tomorrow.emoji}{tomorrow.text} {tomorrow.range_text}" if tomorrow else ""
         fields["remark"] = truncate(
-            f"现在{w.current_temp:.0f}℃ 体感{w.feels_like:.0f}℃{tail}", WX_FIELD_LIMIT
+            f"现在{w.current_temp:.0f}℃ 体感{w.feels_like:.0f}℃{tail}", WX_LINE_LIMIT
         )
     elif w:
-        fields["weather"] = truncate(f"{w.city} {w.now_emoji}{w.now_text} {w.current_temp:.0f}℃")
+        fields["weather"] = truncate(f"{w.city} {w.now_emoji}{w.now_text} {w.current_temp:.0f}℃", WX_LINE_LIMIT)
         fields["remark"] = "天气详情暂缺"
     else:
         fields["weather"] = "天气数据暂不可用"
         fields["remark"] = ""
 
-    # 要闻：拼到字数上限为止（公众号没有富文本，只能塞标题）
-    lines: list[str] = []
-    budget = WX_FIELD_LIMIT
-    target = min(4, len(d.news))
-    per_line = max(14, (budget - target) // target) if target else 0
-    for idx, item in enumerate(d.news[:target], 1):
-        prefix = f"{idx}. "
-        room = max(6, per_line - len(prefix))
-        title = item.clean_title()
-        if len(title) > room:
-            title = title[: room - 1].rstrip() + "…"
-        line = prefix + title
-        if len(line) + 1 > budget:
-            break
-        lines.append(line)
-        budget -= len(line) + 1
-    fields["news"] = "\n".join(lines) if lines else "今天暂无更新"
+    # 微信把模板消息的每个字段压成一行，多行只有第一行可见，
+    # 所以这里不拼列表，只把 2 条要点用「/」连成一行。
+    if d.news:
+        fields["news"] = " / ".join(_topic(i.clean_title()) for i in d.news[:2])
+    else:
+        fields["news"] = "今天暂无更新"
 
     # n1~n5 给「服务号类目模板」用：thing 类型字段上限 20 字
     for idx, item in enumerate(d.news[:5], 1):
@@ -291,7 +325,11 @@ def compact_fields(d: Digest) -> dict[str, str]:
 
     tips = d.tips()
     if tips:
-        fields["tip"] = truncate("；".join(tips[:2]))
+        # 一行塞不下两条就只留最关键的那条，避免在小卡片里被切成半句话
+        advice = "；".join(tips[:2])
+        if len(advice) > WX_LINE_LIMIT:
+            advice = tips[0]
+        fields["tip"] = truncate(advice, WX_LINE_LIMIT)
     elif d.weather:
         fields["tip"] = "天气平稳，按平常穿就好"
     else:

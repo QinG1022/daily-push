@@ -156,6 +156,24 @@ class Config:
 DEFAULT_SOURCES = "ithome,ifanr,sspai,solidot,geekpark,tmtpost"
 
 
+def _default_channels() -> str:
+    """没显式写 PUSH_CHANNELS 时，按「已经配好凭据」的渠道自动选一个。
+
+    这样即使忘了在 GitHub 里设置 PUSH_CHANNELS 变量，也不会发错地方。
+    """
+    if _env("SERVERCHAN_SENDKEY"):
+        return "serverchan"
+    if _env("PUSHPLUS_TOKEN"):
+        return "pushplus"
+    if _env("WECOM_WEBHOOK"):
+        return "wecom"
+    if _env("WX_APPID"):
+        return "wechat_mp"
+    if _env("SMTP_HOST"):
+        return "mail"
+    return "wechat_mp"
+
+
 def load_config(slot_override: str | None = None) -> Config:
     load_dotenv()
 
@@ -168,7 +186,7 @@ def load_config(slot_override: str | None = None) -> Config:
         news_sources=_env_list("NEWS_SOURCES", DEFAULT_SOURCES),
         news_count=max(1, _env_int("NEWS_COUNT", 6)),
         news_lookback_hours=_env_float("NEWS_LOOKBACK_HOURS", 30.0),
-        channels=_env_list("PUSH_CHANNELS", "wechat_mp"),
+        channels=_env_list("PUSH_CHANNELS", _default_channels()),
         extras=_env_list("EXTRAS", ""),
         countdowns=_env_list("COUNTDOWN", ""),
         fx_pairs=_env_list("FX_PAIRS", ""),

@@ -190,6 +190,25 @@ copy .env.example .env      # macOS/Linux 用 cp
 
 之后每天 09:00 / 12:00 / 18:00（北京时间）自动发，不用再管。
 
+### 3.4 推荐：改用 Server酱，点开就能看全文
+
+公众号模板消息**只是一张通知卡片，不是网页**，微信也没有「展开全文」。而且每个字段只显示**一行**（约 26 字），6 条新闻根本塞不进去，系统会用「…」硬截断——所以你只能看到摘要。
+
+要「点开看全文」，最省事的是换成 **Server酱（方糖）**：微信里收到一条「方糖」服务号消息，点开就是一个渲染好的网页，6 条新闻齐全、链接可点。
+
+1. 打开 <https://sct.ftqq.com>，微信扫码登录
+2. 进「SendKey」页面，复制那串 `SCT` 开头的密钥
+3. 仓库 → Settings → Secrets and variables → Actions：
+   - **Secrets** 加 `SERVERCHAN_SENDKEY` = 刚才的密钥
+   - **Variables** 把 `PUSH_CHANNELS` 改成 `serverchan`
+4. 重跑一次 workflow
+
+> **额度**：免费会员每天 5 条。你要 3 条/天，够用但没多少余量——同一天手动重跑两三次就会超，超出后当天不再发。新用户有 7 天全功能试用。
+>
+> 想要零额度顾虑就换 PushPlus（约 200 条/天），改 `PUSH_CHANNELS=pushplus` + 加 `PUSHPLUS_TOKEN` 即可。
+
+**如果你更希望消息来自自己的公众号卡片**，那必须自建网页给 `WX_LINK_URL` 用。免费方案是 GitHub Pages，但它要求仓库**公开**：Settings → 最下面 Danger Zone → Change visibility → Make public，然后 Settings → Pages → Source 选 `Deploy from a branch`、目录 `/docs`，再把 `WX_LINK_URL` 设成 `https://你的用户名.github.io/daily-push/`。
+
 几个必须知道的坑：
 
 | 现象 | 原因 | 处理 |
@@ -253,7 +272,7 @@ LLM_MODEL=deepseek-chat
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `CITY` | `北京` | 中文地名，自动地理编码；同名地多时可改用 `LATITUDE`/`LONGITUDE` |
-| `PUSH_CHANNELS` | `wechat_mp` | 逗号分隔：`wechat_mp` `mail` `serverchan` `pushplus` `wecom` |
+| `PUSH_CHANNELS` | 自动 | 逗号分隔：`wechat_mp` `mail` `serverchan` `pushplus` `wecom`。**留空则按已配好的凭据自动选一个**（优先 serverchan → pushplus → wecom → wechat_mp → mail） |
 | `SLOT` | `auto` | `morning`(09点) / `noon`(12点) / `evening`(18点)，`auto` 按当前时间判断 |
 | `NEWS_SOURCES` | 6 个源 | 可选：`ithome` `ifanr` `sspai` `solidot` `geekpark` `tmtpost` |
 | `NEWS_COUNT` | `6` | 选几条，建议 4~8 |
