@@ -76,12 +76,12 @@ def truncate(text: str, limit: int = WX_FIELD_LIMIT) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
-def _news_line(item: NewsItem, idx: int, *, with_link: bool) -> str:
-    head = f"{idx}. {item.clean_title()}"
-    meta = f"{item.source_name} · {item.age_text()}"
-    if with_link:
-        return f"{head} — {meta}\n   {item.link}"
-    return f"{head}（{item.source_name}）"
+def _news_line(item: NewsItem, idx: int) -> str:
+    """标题本身做成链接——比裸露长 URL 干净得多。"""
+    return (
+        f"{idx}. [{item.clean_title()}]({item.link})"
+        f"（{item.source_name} · {item.age_text()}）"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -97,7 +97,8 @@ def render_markdown(d: Digest) -> str:
             f"测试时间 {d.local:%Y-%m-%d %H:%M}\n"
         )
 
-    lines: list[str] = [f"## {d.full_title}", ""]
+    # 不再重复大标题：方糖/PushPlus 页面顶部本来就显示 title
+    lines: list[str] = []
 
     if d.weather:
         w = d.weather
@@ -106,19 +107,24 @@ def render_markdown(d: Digest) -> str:
             lines.append(f"**{w.city}** {t.emoji} {t.text}　{t.range_text}　降水 {t.pop}%")
         else:
             lines.append(f"**{w.city}** {w.now_emoji} {w.now_text}　{w.current_temp:.0f}℃")
-        lines.append(w.comfort_line())
-        fc = format_forecast_lines(w, limit=3)
-        if fc:
-            lines.append("")
-            lines.append("　".join(fc))
+        lines.append("")
+        # 用列表而不是普通换行：markdown 的单个换行会被合并成一段
+        lines.append(
+            f"- 现在 {w.current_temp:.0f}℃（体感 {w.feels_like:.0f}℃）"
+            f"· 湿度 {w.humidity}% · 风 {w.wind:.0f}km/h"
+        )
+        for day in w.days[1:3]:
+            lines.append(f"- {day.label} {day.emoji}{day.text} {day.range_text} 降水{day.pop}%")
+        lines.append("")
     else:
         lines.append("_天气数据暂不可用_")
-    lines.append("")
+        lines.append("")
 
     if d.news:
         lines.append(f"### 📰 近 {d.lookback_hours:.0f} 小时要闻")
+        lines.append("")
         for idx, item in enumerate(d.news, 1):
-            lines.append(_news_line(item, idx, with_link=True))
+            lines.append(_news_line(item, idx))
         lines.append("")
     else:
         lines.append("_暂时没抓到符合条件的新闻_")
@@ -127,12 +133,14 @@ def render_markdown(d: Digest) -> str:
     tips = d.tips()
     if tips:
         lines.append("### 🧥 出门提示")
+        lines.append("")
         lines.extend(f"- {t}" for t in tips)
         lines.append("")
 
     if d.ai:
         lines.append("### 🎯 一句话")
-        lines.append(d.ai)
+        lines.append("")
+        lines.append(f"> {d.ai}")
         lines.append("")
 
     quotes = d.extra_of("quote")
@@ -143,17 +151,19 @@ def render_markdown(d: Digest) -> str:
     marks = d.extra_of("countdown")
     if marks:
         lines.append("### 🗓 倒数日")
+        lines.append("")
         lines.extend(f"- {m.text}" for m in marks)
         lines.append("")
 
     fx = d.extra_of("fx")
     if fx:
         lines.append("### 💱 汇率")
-        lines.append("　".join(e.text for e in fx))
+        lines.append("")
+        lines.extend(f"- {e.text}" for e in fx)
         lines.append("")
 
     lines.append("---")
-    lines.append(f"由 daily-push 生成 · {d.local:%Y-%m-%d %H:%M}")
+    lines.append(f"*由 daily-push 生成 · {d.local:%m-%d %H:%M}*")
     return "\n".join(lines).strip() + "\n"
 
 
