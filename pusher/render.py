@@ -142,6 +142,11 @@ def render_markdown(d: Digest) -> str:
             if w.aqi is not None:
                 extra.append(f"AQI {w.aqi}（{aqi_level(w.aqi)}）")
             lines.append("- " + " · ".join(extra))
+        # 出门提示跟着天气走，放在新闻前面才顺
+        tips = d.tips()
+        if tips:
+            lines.append("")
+            lines.append("> 🧥 " + " · ".join(tips))
         lines.append("")
     else:
         lines.append("_天气数据暂不可用_")
@@ -157,13 +162,6 @@ def render_markdown(d: Digest) -> str:
             lines.append("")
     else:
         lines.append("_暂时没抓到符合条件的新闻_")
-        lines.append("")
-
-    tips = d.tips()
-    if tips:
-        lines.append("### 🧥 出门提示")
-        lines.append("")
-        lines.extend(f"- {t}" for t in tips)
         lines.append("")
 
     if d.ai:
@@ -229,6 +227,9 @@ def render_plain(d: Digest) -> str:
             if w.aqi is not None:
                 extra.append(f"AQI {w.aqi} {aqi_level(w.aqi)}")
             lines.append("  " + " · ".join(extra))
+        tips_now = d.tips()
+        if tips_now:
+            lines.append("  🧥 " + " · ".join(tips_now))
         lines.append("")
     if d.news:
         for cat, items in _group_news(d.news):
@@ -239,8 +240,6 @@ def render_plain(d: Digest) -> str:
             lines.append("")
     if d.ai:
         lines.extend(["【一句话】", d.ai, ""])
-    for tip in d.tips():
-        lines.append(f"· {tip}")
     for e in d.extras:
         if e.kind in ("countdown", "fx"):
             lines.append(f"· {e.text}")
