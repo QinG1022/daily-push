@@ -172,7 +172,7 @@ class Config:
         return broken
 
 
-DEFAULT_SOURCES = "ithome,ifanr,sspai,solidot,geekpark,tmtpost,gcores,yystv,jiemian"
+DEFAULT_SOURCES = "ithome,ifanr,sspai,solidot,geekpark,tmtpost,jiemian"
 
 
 def _default_channels() -> str:

@@ -13,7 +13,7 @@ from datetime import datetime
 from html import escape
 
 from .extras import Extra
-from .news import NewsItem
+from .news import CATEGORY_LABELS, NewsItem, categorize
 from .weather import Weather, aqi_level, format_forecast_lines, uv_level
 
 SLOT_TITLES = {
@@ -84,6 +84,28 @@ def _news_line(item: NewsItem, idx: int) -> str:
     )
 
 
+# 板块顺序与图标：和 news.categorize 的品类一一对应
+SECTION_ORDER = ("ai", "chip", "phone", "auto", "energy", "game", "intl", "other")
+SECTION_ICONS = {
+    "ai": "🤖",
+    "chip": "🔬",
+    "phone": "📱",
+    "auto": "🚗",
+    "energy": "⚡",
+    "game": "🎮",
+    "intl": "🌍",
+    "other": "📰",
+}
+
+
+def _group_news(items: list[NewsItem]) -> list[tuple[str, list[NewsItem]]]:
+    """按品类分组，只返回有内容的板块，顺序固定。"""
+    buckets: dict[str, list[NewsItem]] = {}
+    for item in items:
+        buckets.setdefault(categorize(item.title), []).append(item)
+    return [(cat, buckets[cat]) for cat in SECTION_ORDER if buckets.get(cat)]
+
+
 # --------------------------------------------------------------------------- #
 # Markdown（邮件 / 推送服务）
 # --------------------------------------------------------------------------- #
@@ -126,11 +148,13 @@ def render_markdown(d: Digest) -> str:
         lines.append("")
 
     if d.news:
-        lines.append(f"### 📰 近 {d.lookback_hours:.0f} 小时要闻")
-        lines.append("")
-        for idx, item in enumerate(d.news, 1):
-            lines.append(_news_line(item, idx))
-        lines.append("")
+        for cat, items in _group_news(d.news):
+            icon = SECTION_ICONS.get(cat, "📰")
+            lines.append(f"### {icon} {CATEGORY_LABELS.get(cat, cat)}")
+            lines.append("")
+            for idx, item in enumerate(items, 1):
+                lines.append(_news_line(item, idx))
+            lines.append("")
     else:
         lines.append("_暂时没抓到符合条件的新闻_")
         lines.append("")
@@ -168,7 +192,7 @@ def render_markdown(d: Digest) -> str:
         lines.append("")
 
     lines.append("---")
-    lines.append(f"*由 daily-push 生成 · {d.local:%m-%d %H:%M}*")
+    lines.append(f"*由 daily-push 生成 · {d.local:%m-%d %H:%M} · 近 {d.lookback_hours:.0f} 小时*")
     return "\n".join(lines).strip() + "\n"
 
 
@@ -207,11 +231,12 @@ def render_plain(d: Digest) -> str:
             lines.append("  " + " · ".join(extra))
         lines.append("")
     if d.news:
-        lines.append(f"【近 {d.lookback_hours:.0f} 小时要闻】")
-        for idx, item in enumerate(d.news, 1):
-            lines.append(f"{idx}. {item.clean_title()}（{item.source_name} · {item.age_text()}）")
-            lines.append(f"   {item.link}")
-        lines.append("")
+        for cat, items in _group_news(d.news):
+            lines.append(f"【{CATEGORY_LABELS.get(cat, cat)}】")
+            for idx, item in enumerate(items, 1):
+                lines.append(f"{idx}. {item.clean_title()}（{item.source_name} · {item.age_text()}）")
+                lines.append(f"   {item.link}")
+            lines.append("")
     if d.ai:
         lines.extend(["【一句话】", d.ai, ""])
     for tip in d.tips():

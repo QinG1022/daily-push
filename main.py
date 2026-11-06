@@ -104,8 +104,12 @@ def build_digest(cfg: config_mod.Config) -> render.Digest:
     try:
         pool, window = load_pool(cfg, slot)
         if cfg.news_mix:
-            picked = news.pick_mixed(pool, cfg.news_count, cfg.news_mix)
-            mix_desc = " / ".join(f"{k}×{v}" for k, v in cfg.news_mix)
+            # 总条数 = 各板块配额之和，不再单独用一个总数
+            total = sum(q for _, q in cfg.news_mix) or cfg.news_count
+            picked = news.pick_mixed(pool, total, cfg.news_mix)
+            mix_desc = " / ".join(
+                f"{news.CATEGORY_LABELS.get(k, k)}×{v}" for k, v in cfg.news_mix
+            )
             print(
                 f"[news] 回看 {window:.0f} 小时 · 候选 {len(pool)} 条"
                 f" · 按配额 {mix_desc} 选出 {len(picked)} 条"
@@ -199,9 +203,10 @@ def explain_selection(cfg: config_mod.Config) -> int:
     print("[explain] 抓取并排序，不发送…")
     pool, window = load_pool(cfg, resolve_slot(cfg.slot, cfg.timezone))
 
+    target = sum(q for _, q in cfg.news_mix) if cfg.news_mix else cfg.news_count
     print(
         f"\n候选 {len(pool)} 条 · 回看 {window:.0f} 小时"
-        f" · 目标 {cfg.news_count} 条"
+        f" · 目标 {target} 条"
     )
 
     def label(cat: str) -> str:
@@ -217,7 +222,7 @@ def explain_selection(cfg: config_mod.Config) -> int:
     if cfg.news_mix:
         desc = " / ".join(f"{label(k)}×{v}" for k, v in cfg.news_mix)
         print(f"\n=== 按配额推送：{desc} ===")
-        picked = news.pick_mixed(pool, cfg.news_count, cfg.news_mix)
+        picked = news.pick_mixed(pool, target, cfg.news_mix)
     else:
         print("\n=== 纯按分数推送（未设 NEWS_MIX） ===")
         picked = news.pick(pool, cfg.news_count)

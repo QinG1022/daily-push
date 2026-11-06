@@ -23,9 +23,6 @@ SOURCES: dict[str, tuple[str, str]] = {
     "solidot": ("Solidot", "https://www.solidot.org/index.rss"),
     "geekpark": ("极客公园", "https://www.geekpark.net/rss"),
     "tmtpost": ("钛媒体", "https://www.tmtpost.com/rss"),
-    # 补位源：游戏专门源 + 国际/时政，避免全靠 IT之家
-    "gcores": ("机核", "https://www.gcores.com/rss"),
-    "yystv": ("游研社", "https://www.yystv.cn/rss/feed"),
     "jiemian": ("界面新闻", "https://a.jiemian.com/index.php?m=article&a=rss"),
 }
 
@@ -189,8 +186,12 @@ def dedupe(items: Iterable[NewsItem]) -> list[NewsItem]:
 ROUNDUP_HINTS = ("早知道", "早报", "晚报", "午报", "周报", "日报", "盘点", "汇总", "合集", "一周")
 # 评论连载（「（上篇）」这种）不是新闻，别占要闻位
 SERIAL_HINTS = ("（上篇）", "（下篇）", "（上）", "（下）", "（一）", "（二）", "（三）", "连载", "系列报道")
-# 活动预告/报名/议程，不是新闻
-EVENT_HINTS = ("报名", "议程", "嘉宾", "预告", "揭晓", "邀请函", "征集", "招募")
+# 活动预告/人事/辟谣这类，不是新闻
+EVENT_HINTS = (
+    "报名", "议程", "嘉宾", "预告", "揭晓", "邀请函", "征集", "招募",
+    "面对面", "圆桌", "沙龙", "誓师", "授旗", "启动仪式", "开幕致辞",
+)
+LOW_VALUE_HINTS = ("公关", "任命", "履新", "招聘", "诈骗", "辟谣", "澄清", "律师函")
 # 纯 A 股/美股行情类，和科技早报无关
 FINANCE_HINTS = (
     "股价", "涨停", "跌停", "预增", "减持", "定增", "股东", "增持", "回购",
@@ -233,9 +234,22 @@ def _quality_penalty(title: str) -> float:
         penalty -= 2.5
     if any(hint in title for hint in EVENT_HINTS):
         penalty -= 2.0
+    if any(hint in title for hint in LOW_VALUE_HINTS):
+        penalty -= 2.0
     if title.count("；") >= 2 or title.count("｜") >= 1:
         penalty -= 1.0
     return penalty
+
+
+def _is_market_noise(title: str) -> bool:
+    """股市行情类：涨跌、指数点位、中概股这些，和科技早报无关。"""
+    if "指数" in title and ("涨" in title or "跌" in title):
+        return True
+    if any(k in title for k in ("美股", "港股", "A股", "中概股", "纳斯达克指数")):
+        return True
+    if any(k in title for k in ("个股", "板块", "涨停", "跌停")):
+        return True
+    return False
 
 
 def _brand_of(title: str) -> str:
@@ -264,12 +278,35 @@ PHONE_KEYS = (
     "三星", "荣耀", "oppo", "vivo", "一加", "realme", "iqoo", "魅族", "红米",
     "手机", "折叠屏", "骁龙", "天玑", "鸿蒙", "ios", "android", "平板",
 )
-# 手机类必须是「真·产品新闻」：得同时有产品词，且不能是机器人/软件/汽车
+# 手机类必须「品牌 + 产品/动作词」双命中，否则「小米成立公关部」也会被算成手机新闻
+PHONE_BRAND_WORDS = (
+    "苹果", "iphone", "ipad", "华为", "小米", "红米", "redmi", "oppo", "vivo",
+    "一加", "realme", "iqoo", "魅族", "荣耀", "三星", "努比亚", "中兴", "摩托罗拉",
+)
 PHONE_PRODUCT_KEYS = (
-    "手机", "iphone", "ipad", "macbook", "imac", "airpods", "平板", "折叠屏",
-    "开售", "售价", "元起", "国补", "机型", "旗舰", "耳机", "手表", "手环",
+    "手机", "新机", "中端机", "旗舰机", "开模", "真机", "上手", "开售", "售价",
+    "元起", "国补", "机型", "折叠屏", "平板", "macbook", "imac", "airpods",
+    "耳机", "手表", "手环", "发布", "曝光", "亮相", "屏幕", "影像", "续航",
+    "芯片", "处理器", "配色", "按键", "按钮",
 )
 PHONE_NEGATIVE = ("机器人", "智能体", "自动驾驶", "汽车", "大模型", "远程", "云服务")
+# 半导体 / 芯片：制程、设备、厂商，不含「骁龙/天玑」这类手机 SoC（那些归手机）
+CHIP_KEYS = (
+    "芯片", "半导体", "晶圆", "光刻", "制程", "台积电", "中芯", "英伟达",
+    "nvidia", "amd", "高通", "联发科", "arm", "dram", "nand", "gpu", "soc",
+    "封装", "存储器", "代工", "显卡", "算力芯片", "3nm", "2nm", "5nm",
+)
+# 汽车：整车 / 智驾 / 座舱（电池、光伏这些归「新能源」）
+AUTO_KEYS = (
+    "汽车", "特斯拉", "比亚迪", "蔚来", "小鹏", "理想汽车", "问界", "智界",
+    "极氪", "零跑", "哪吒", "自动驾驶", "智驾", "车机", "增程", "纯电", "混动",
+    "车企", "整车", "座舱", "新车", "小米汽车", "鸿蒙智行",
+)
+# 新能源：只在能源侧，不收整车
+ENERGY_KEYS = (
+    "新能源", "光伏", "储能", "锂电", "固态电池", "电池", "风电", "氢能",
+    "充电桩", "电网", "碳中和", "宁德时代", "太阳能", "核电", "特高压",
+)
 INTL_KEYS = (
     "欧盟", "美国", "日本", "韩国", "德国", "英国", "法国", "印度", "俄罗斯",
     "白宫", "国会", "联合国", "nasa", "spacex", "欧洲", "加拿大", "巴西",
@@ -279,8 +316,11 @@ INTL_KEYS = (
 _AI_RE = re.compile(r"(?<![a-z])ai(?![a-z])", re.IGNORECASE)
 
 CATEGORY_LABELS = {
-    "ai": "大模型",
-    "phone": "手机/消费电子",
+    "ai": "AI 前线",
+    "chip": "半导体芯片",
+    "phone": "手机",
+    "auto": "汽车",
+    "energy": "新能源",
     "game": "游戏",
     "intl": "国际",
     "other": "其他",
@@ -289,40 +329,32 @@ CATEGORY_LABELS = {
 
 # 同一品类里，某个品牌最多占几条；没列出的品类用默认 per_brand
 BRAND_CAPS = {
-    "phone": 2,   # 手机类每个品牌最多 2 条：既不让苹果刷屏，也不至于把它们全挡掉
+    "phone": 99,   # 手机类不限品牌
 }
-
-# 手机类只收这几个品牌（含子品牌），其余手机厂商的新闻一律不进
-PHONE_BRANDS = (
-    "苹果",                                    # 苹果
-    "华为",                                    # 华为
-    "小米", "红米", "redmi",                    # 小米 + 子品牌
-    "oppo", "一加", "realme",                   # OPPO + 子品牌
-    "vivo", "iqoo",                            # vivo + 子品牌
-)
-
-
-def _phone_brand_allowed(item: "NewsItem") -> bool:
-    """手机类里的条目，品牌必须在白名单内；识别不出品牌的放行。"""
-    if categorize(item.title) != "phone":
-        return True
-    brand = _brand_of(item.title)
-    return (not brand) or brand in PHONE_BRANDS
 
 
 def categorize(title: str) -> str:
-    """把标题丢进 ai / phone / game / intl / other 之一。顺序即优先级。"""
+    """把标题丢进一个品类。顺序即优先级，先命中的赢。
+
+    game → ai → phone → chip → auto → energy → intl → other
+    """
     lowered = title.lower()
     if any(key in lowered for key in GAME_KEYS):
         return "game"
     if _AI_RE.search(lowered) or any(key in lowered for key in AI_KEYS):
         return "ai"
     if (
-        any(key in lowered for key in PHONE_PRODUCT_KEYS)
-        and any(brand in lowered for brand in PHONE_BRANDS)
+        any(brand in lowered for brand in PHONE_BRAND_WORDS)
+        and any(key in lowered for key in PHONE_PRODUCT_KEYS)
         and not any(neg in lowered for neg in PHONE_NEGATIVE)
     ):
         return "phone"
+    if any(key in lowered for key in CHIP_KEYS):
+        return "chip"
+    if any(key in lowered for key in AUTO_KEYS):
+        return "auto"
+    if any(key in lowered for key in ENERGY_KEYS):
+        return "energy"
     if any(key in lowered for key in INTL_KEYS):
         return "intl"
     return "other"
@@ -422,8 +454,8 @@ def collect(cfg: Config, *, now: datetime | None = None) -> list[NewsItem]:
         i for i in pool
         if fresh(i)
         and not any(word in i.title for word in BLOCK)
+        and not _is_market_noise(i.title)
         and _passes_gate(i)
-        and _phone_brand_allowed(i)
     ]
     candidates = dedupe(candidates)
     score_items(candidates)
@@ -532,24 +564,37 @@ def pick_mixed(
             pinned["game"] = pinned.get("game", 0) + 1
             break
 
+    # Epic 是「额外一条」，不挤占品类配额：有就多一条，没有就是原定条数
+    limit = total + sum(pinned.values())
+
     # 配额阶段给来源留一个宽松上限：既不卡死品类，也不让 IT之家 一家占满
-    quota_cap = max(per_source, int(round(total * 0.6)))
+    quota_cap = max(per_source, int(round(total * 0.75)))
     for cat, quota in mix:
         got = pinned.get(cat, 0)
-        # 手机类单独收紧：每个品牌最多 1 条，免得整版都是苹果
         brand_cap = BRAND_CAPS.get(cat, per_brand)
         for item in buckets.get(cat, []):
-            if got >= quota or len(chosen) >= total:
+            if got >= quota or len(chosen) >= limit:
                 break
             if take(item, cat, quota_cap, brand_cap):
                 got += 1
 
-    # 补位阶段才收紧来源上限（品牌上限仍然按品类生效，否则苹果又会刷屏）
+    # 补位阶段才收紧来源上限；同时给每个品类一个软上限（配额 +1），
+    # 免得别的板块缺货时，补位全堆到同一个品类上
+    quota_of = dict(mix)
+    cat_taken: dict[str, int] = {}
+    for picked_item in chosen:
+        c = categorize(picked_item.title)
+        cat_taken[c] = cat_taken.get(c, 0) + 1
+
     for item in candidates:
-        if len(chosen) >= total:
+        if len(chosen) >= limit:
             break
         cat = categorize(item.title)
-        take(item, cat, per_source, BRAND_CAPS.get(cat, per_brand))
+        cap = quota_of.get(cat)
+        if cap is not None and cat_taken.get(cat, 0) >= cap + 1:
+            continue
+        if take(item, cat, per_source, BRAND_CAPS.get(cat, per_brand)):
+            cat_taken[cat] = cat_taken.get(cat, 0) + 1
 
     chosen.sort(key=lambda i: (i.score, -i.age_hours), reverse=True)
-    return chosen[:total]
+    return chosen[:limit]
