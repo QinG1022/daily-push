@@ -230,8 +230,24 @@ def geocode(city: str) -> tuple[float, float, str]:
         "https://geocoding-api.open-meteo.com/v1/search",
         {"name": city, "count": 1, "language": "zh", "format": "json"},
     )
-    data = http.get_json(url, timeout=15)
-    results = data.get("results") or []
+    try:
+        data = http.get_json(url, timeout=15)
+        results = data.get("results") or []
+    except Exception as exc:
+        # 退回最简参数再试一次（某些网络环境下带 language 的请求会被拦）
+        try:
+            data = http.get_json(
+                http.with_query(
+                    "https://geocoding-api.open-meteo.com/v1/search",
+                    {"name": city, "count": 1, "format": "json"},
+                ),
+                timeout=15,
+            )
+            results = data.get("results") or []
+        except Exception:
+            raise RuntimeError(
+                f"地理位置查询失败：{exc}。可在 Variables 里直接配 LATITUDE / LONGITUDE 跳过这一步"
+            ) from exc
     if not results:
         raise RuntimeError(f"找不到城市「{city}」，请检查 CITY 环境变量")
     hit = results[0]
@@ -265,33 +281,61 @@ def dress_advice(feels_like: float) -> str:
     return "轻薄透气，尽量避开正午户外"
 
 
+_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+
+# 先用完整字段；万一某个字段不被接口接受，退回只请求必需字段
+_DAILY_FULL = (
+    "weather_code,temperature_2m_max,temperature_2m_min,"
+    "precipitation_probability_max,precipitation_sum,uv_index_max,"
+    "sunrise,sunset"
+)
+_DAILY_MINIMAL = "weather_code,temperature_2m_max,temperature_2m_min"
+
+
+def _query_forecast(lat: float, lon: float, tz: str, daily: str) -> dict:
+    url = http.with_query(
+        _FORECAST_URL,
+        {
+            "latitude": f"{lat:.4f}",
+            "longitude": f"{lon:.4f}",
+            "current": "temperature_2m,relative_humidity_2m,apparent_temperature,"
+                       "weather_code,wind_speed_10m",
+            "daily": daily,
+            "timezone": tz,
+            "forecast_days": 3,
+        },
+    )
+    return http.get_json(url, timeout=20)
+
+
 def fetch_weather(cfg: Config) -> Weather:
     if cfg.latitude is not None and cfg.longitude is not None:
         lat, lon, name = cfg.latitude, cfg.longitude, cfg.city
     else:
         lat, lon, name = geocode(cfg.city)
 
-    url = http.with_query(
-        "https://api.open-meteo.com/v1/forecast",
-        {
-            "latitude": f"{lat:.4f}",
-            "longitude": f"{lon:.4f}",
-            "current": "temperature_2m,relative_humidity_2m,apparent_temperature,"
-                       "weather_code,wind_speed_10m",
-            "daily": "weather_code,temperature_2m_max,temperature_2m_min,"
-                     "precipitation_probability_max,precipitation_sum,uv_index_max,"
-                     "sunrise,sunset",
-            "timezone": cfg.timezone,
-            "forecast_days": 3,
-        },
-    )
-    data = http.get_json(url, timeout=20)
+    data: dict | None = None
+    failures: list[str] = []
+    for label, daily in (("完整", _DAILY_FULL), ("精简", _DAILY_MINIMAL)):
+        try:
+            data = _query_forecast(lat, lon, cfg.timezone, daily)
+            break
+        except Exception as exc:
+            failures.append(f"{label}查询失败({exc})")
+    if data is None:
+        raise RuntimeError("；".join(failures))
 
     cur = data.get("current") or {}
     daily = data.get("daily") or {}
+
+    def pick(key: str, idx: int, default=0):
+        """字段缺失或数组不够长时给默认值——精简模式会少很多字段。"""
+        seq = daily.get(key) or []
+        return seq[idx] if idx < len(seq) else default
+
     days: list[DayForecast] = []
     for idx, day_str in enumerate(daily.get("time") or []):
-        code = (daily.get("weather_code") or [0])[idx]
+        code = pick("weather_code", idx)
         text, emoji = describe(code)
         days.append(
             DayForecast(
@@ -300,13 +344,13 @@ def fetch_weather(cfg: Config) -> Weather:
                 code=int(code),
                 text=text,
                 emoji=emoji,
-                tmax=float((daily.get("temperature_2m_max") or [0])[idx]),
-                tmin=float((daily.get("temperature_2m_min") or [0])[idx]),
-                pop=int((daily.get("precipitation_probability_max") or [0])[idx] or 0),
-                precip=float((daily.get("precipitation_sum") or [0])[idx] or 0),
-                uv=float((daily.get("uv_index_max") or [0])[idx] or 0),
-                sunrise=_hm((daily.get("sunrise") or [""])[idx] or ""),
-                sunset=_hm((daily.get("sunset") or [""])[idx] or ""),
+                tmax=float(pick("temperature_2m_max", idx) or 0),
+                tmin=float(pick("temperature_2m_min", idx) or 0),
+                pop=int(pick("precipitation_probability_max", idx) or 0),
+                precip=float(pick("precipitation_sum", idx) or 0),
+                uv=float(pick("uv_index_max", idx) or 0),
+                sunrise=_hm(pick("sunrise", idx, "") or ""),
+                sunset=_hm(pick("sunset", idx, "") or ""),
             )
         )
     feels = float(cur.get("apparent_temperature", cur.get("temperature_2m", 0)) or 0)
