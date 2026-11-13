@@ -216,7 +216,7 @@ git push -u origin main
 
 | 现象 | 原因 | 处理 |
 |---|---|---|
-| 晚几分钟到二十分钟 | GitHub 免费 runner 的定时任务排队延迟 | 正常，无法根治 |
+| 不按点发，晚几分钟到几小时不等 | GitHub 免费 runner 的定时任务排队，负载高时延迟会很长 | 无法根治。在意准点就换外部定时器（cron-job.org 调 workflow_dispatch） |
 | 两个月后突然不发了 | 仓库 60 天无提交，定时任务被自动停用 | 已带 `keepalive.yml` 每月自动提交一次；真停了去 Actions 页点「Enable workflow」 |
 | Actions 分钟数不够 | 私有仓库每月 2000 分钟免费额度 | 一天三次、每次约 40 秒，一个月只用 60 分钟，够用 |
 | 想改时间 | 改 `.github/workflows/daily.yml` 的 cron | cron 走 UTC，北京时间减 8 小时（09:00 → `0 1 * * *`） |
