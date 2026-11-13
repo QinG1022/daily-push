@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any
@@ -281,7 +282,9 @@ def dress_advice(feels_like: float) -> str:
     return "轻薄透气，尽量避开正午户外"
 
 
-_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+_FORECAST_URL = (
+    os.environ.get("WEATHER_API_BASE") or "https://api.open-meteo.com/v1/forecast"
+).rstrip("/")
 
 # 先用完整字段；万一某个字段不被接口接受，退回只请求必需字段
 _DAILY_FULL = (
@@ -305,7 +308,8 @@ def _query_forecast(lat: float, lon: float, tz: str, daily: str) -> dict:
             "forecast_days": 3,
         },
     )
-    return http.get_json(url, timeout=20)
+    # 云端偶尔 SSL 握手超时，多给几次机会、放宽超时
+    return http.get_json(url, timeout=30, retries=4)
 
 
 def fetch_weather(cfg: Config) -> Weather:
