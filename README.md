@@ -395,7 +395,8 @@ daily-push/
 │   ├── weather.py              Open-Meteo 天气 + 空气质量 + WMO 码 + 穿衣提示
 │   ├── news.py                 RSS 抓取 / 去重 / 打分 / 分类 / 配额选稿
 │   ├── extras.py               每日一句、倒数日、汇率
-│   ├── llm.py                  可选的一句话总结
+│   ├── llm.py                  今日概览（AI 总结）
+│   ├── search.py               联网补缺（DeepSeek Search）
 │   ├── render.py               三种版式输出
 │   └── channels/               各推送渠道，一个渠道一个文件
 ├── .github/workflows/
