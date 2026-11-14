@@ -123,7 +123,7 @@ def build_digest(cfg: config_mod.Config) -> render.Digest:
 
     # ---- 联网补缺（DeepSeek Search）----
     # 只在某个板块配额没填满时才去搜，补到对应板块里
-    if cfg.search_key and cfg.news_mix:
+    if cfg.search_key and cfg.search_enabled and cfg.news_mix:
         existing = [i.link for i in pool] + [i.link for i in picked]
         counts: dict[str, int] = {}
         for item in picked:
