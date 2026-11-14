@@ -251,13 +251,16 @@ LLM_MODEL=deepseek-flash
 
 ### 5.2 联网补充（可选）
 
-RSS 只有 7 个源，难免漏掉东西。开启后会用 [DeepSeek Search API](https://api-docs.deepseek.com/zh-cn/guides/search) 按板块搜一遍，把 RSS 没覆盖到的热点补在消息末尾：
+RSS 只有 7 个源，难免漏掉东西。开启后会用 [DeepSeek Search API](https://api-docs.deepseek.com/zh-cn/guides/search) 按板块搜一遍，把 RSS 没覆盖到的热点补进对应板块：
 
 ```dotenv
-SEARCH_API_KEY=sk-...   # 不填则完全不启用
-SEARCH_EXTRA=2          # 最多补几条
-SEARCH_BUDGET=5         # 最多查几个板块
+LLM_API_KEY=sk-...      # 和上面的「今日概览」共用同一个 key 即可
+SEARCH_ENABLED=1        # 改成 0 就只留总结、不联网
+# SEARCH_EXTRA=2        # 每个板块最多补几条
+# SEARCH_BUDGET=5       # 最多查几个板块
 ```
+
+> 也可以单独配 `SEARCH_API_KEY` 走另一个 key（想分开看用量时才需要）。不配就自动复用 `LLM_API_KEY`。
 
 ```markdown
 ### 🔎 全网补充
@@ -286,8 +289,9 @@ SEARCH_BUDGET=5         # 最多查几个板块
 | `NEWS_COUNT` | `6` | 选几条。**设了 `NEWS_MIX` 后此项被忽略**（总数 = 各板块配额之和） |
 | `NEWS_MIX` | 空 | 板块配额，如 `ai:3,chip:3,phone:2,auto:2,energy:2`。留空则纯按分数选 |
 | `NEWS_LOOKBACK_HOURS` | 自动 | 回看多少小时。留空=跟着时段走（早 12h / 午 4h / 晚 6h）；填数字则固定 |
-| `SEARCH_API_KEY` | 空 | DeepSeek API key。填了才启用联网补充 |
-| `SEARCH_EXTRA` | `2` | 全网补充最多几条 |
+| `SEARCH_API_KEY` | 空 | 可选的独立 key；留空则复用 `LLM_API_KEY` |
+| `SEARCH_ENABLED` | `1` | 改成 `0` 关闭联网补缺（总结不受影响） |
+| `SEARCH_EXTRA` | `2` | 每个板块最多补几条 |
 | `SEARCH_BUDGET` | `5` | 最多查几个板块（每次查询计费 0.005 元） |
 | `EXTRAS` | 空 | `quote`(每日一句) `countdown`(倒数日) `fx`(汇率) |
 | `COUNTDOWN` | 空 | 形如 `2027-01-01\|元旦` |

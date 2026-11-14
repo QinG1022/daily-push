@@ -67,8 +67,9 @@ jobs:
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
           WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          # 联网补充（DeepSeek Search），配了才启用
+          # 联网补充（DeepSeek Search）：SEARCH_API_KEY 可留空，自动复用 LLM_API_KEY
           SEARCH_API_KEY: ${{ secrets.SEARCH_API_KEY }}
+          SEARCH_ENABLED: ${{ vars.SEARCH_ENABLED }}
           SEARCH_EXTRA: ${{ vars.SEARCH_EXTRA }}
           SEARCH_BUDGET: ${{ vars.SEARCH_BUDGET }}
         run: python main.py --show
