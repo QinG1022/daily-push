@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 
 from pusher import config as config_mod
 from pusher import extras as extras_mod
-from pusher import llm, news, render, weather
+from pusher import llm, news, render, search, weather
 from pusher.channels import send_all
 
 ROOT = Path(__file__).resolve().parent
@@ -101,6 +101,7 @@ def build_digest(cfg: config_mod.Config) -> render.Digest:
 
     # ---- 新闻 ----
     picked: list[news.NewsItem] = []
+    pool: list[news.NewsItem] = []
     try:
         pool, window = load_pool(cfg, slot)
         if cfg.news_mix:
@@ -119,6 +120,16 @@ def build_digest(cfg: config_mod.Config) -> render.Digest:
             print(f"[news] 回看 {window:.0f} 小时 · 候选 {len(pool)} 条 · 选出 {len(picked)} 条")
     except Exception as exc:
         print(f"[news] ❌ 获取失败：{exc}")
+
+    # ---- 联网补充（DeepSeek Search）----
+    search_hits: list[search.Hit] = []
+    if cfg.search_key and cfg.search_extra > 0:
+        cats = [c for c, _ in cfg.news_mix] or ["ai", "chip", "phone", "auto", "energy"]
+        try:
+            search_hits = search.collect(cfg, [i.link for i in pool], cats)
+            print(f"[search] 联网补充 {len(search_hits)} 条")
+        except Exception as exc:
+            print(f"[search] ❌ 补充失败：{exc}")
 
     # ---- 附加模块 ----
     ex: list[extras_mod.Extra] = []
@@ -148,6 +159,7 @@ def build_digest(cfg: config_mod.Config) -> render.Digest:
         city=w.city if w else cfg.city,
         weather=w,
         news=picked,
+        search_hits=search_hits,
         extras=ex,
         ai=ai,
         lookback_hours=cfg.news_lookback_hours,

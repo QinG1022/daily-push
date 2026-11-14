@@ -113,8 +113,8 @@ class MailConfig:
 @dataclass
 class LlmConfig:
     api_key: str
-    base_url: str = "https://api.deepseek.com/v1"
-    model: str = "deepseek-chat"
+    base_url: str = "https://api.deepseek.com"
+    model: str = "deepseek-flash"
     timeout: float = 25.0
 
 
@@ -149,6 +149,12 @@ class Config:
     serverchan_key: str = ""
     pushplus_token: str = ""
     wecom_webhook: str = ""
+
+    # 联网补充（DeepSeek Search）
+    search_key: str = ""
+    search_budget: int = 5       # 每次推送最多查几个板块
+    search_extra: int = 2        # 最终最多补几条
+    search_base: str = "https://api.deepseek.com"
 
     # ------------------------------------------------------------------ #
     def missing_channels(self) -> list[str]:
@@ -214,6 +220,11 @@ def load_config(slot_override: str | None = None) -> Config:
         serverchan_key=_env("SERVERCHAN_SENDKEY"),
         pushplus_token=_env("PUSHPLUS_TOKEN"),
         wecom_webhook=_env("WECOM_WEBHOOK"),
+        # 联网补充用 DeepSeek Search；没单独配就复用大模型的 key
+        search_key=_env("SEARCH_API_KEY", _env("LLM_API_KEY")),
+        search_budget=max(0, _env_int("SEARCH_BUDGET", 5)),
+        search_extra=max(0, _env_int("SEARCH_EXTRA", 2)),
+        search_base=_env("SEARCH_API_BASE", "https://api.deepseek.com").rstrip("/"),
     )
 
     if _env("WX_APPID") or _env("WX_APPSECRET"):
@@ -246,8 +257,8 @@ def load_config(slot_override: str | None = None) -> Config:
     if _env("LLM_API_KEY"):
         cfg.llm = LlmConfig(
             api_key=_env("LLM_API_KEY"),
-            base_url=_env("LLM_BASE_URL", "https://api.deepseek.com/v1").rstrip("/"),
-            model=_env("LLM_MODEL", "deepseek-chat"),
+            base_url=_env("LLM_BASE_URL", "https://api.deepseek.com").rstrip("/"),
+            model=_env("LLM_MODEL", "deepseek-flash"),
             timeout=_env_float("LLM_TIMEOUT", 25.0),
         )
 
