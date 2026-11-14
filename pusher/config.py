@@ -150,7 +150,7 @@ class Config:
     pushplus_token: str = ""
     wecom_webhook: str = ""
 
-    # 联网补充（DeepSeek Search）
+    # 联网补充（DeepSeek Search），key 复用 LLM_API_KEY
     search_key: str = ""
     search_enabled: bool = True
     search_budget: int = 5       # 每次推送最多查几个板块
@@ -221,8 +221,8 @@ def load_config(slot_override: str | None = None) -> Config:
         serverchan_key=_env("SERVERCHAN_SENDKEY"),
         pushplus_token=_env("PUSHPLUS_TOKEN"),
         wecom_webhook=_env("WECOM_WEBHOOK"),
-        # 联网补充用 DeepSeek Search；没单独配就复用大模型的 key
-        search_key=_env("SEARCH_API_KEY", _env("LLM_API_KEY")),
+        # 联网补充和「今日概览」共用同一个 key：只配 LLM_API_KEY 一处
+        search_key=_env("LLM_API_KEY"),
         search_enabled=_env("SEARCH_ENABLED", "1") not in ("0", "false", "False", "no"),
         search_budget=max(0, _env_int("SEARCH_BUDGET", 5)),
         search_extra=max(0, _env_int("SEARCH_EXTRA", 2)),
