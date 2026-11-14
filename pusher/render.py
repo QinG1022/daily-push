@@ -152,6 +152,13 @@ def render_markdown(d: Digest) -> str:
         lines.append("_天气数据暂不可用_")
         lines.append("")
 
+    # 今日概览：紧跟在天气下面，先给结论再看细节
+    if d.ai:
+        lines.append("### 📌 今日概览")
+        lines.append("")
+        lines.append(f"> {d.ai}")
+        lines.append("")
+
     if d.news:
         for cat, items in _group_news(d.news):
             icon = SECTION_ICONS.get(cat, "📰")
@@ -162,12 +169,6 @@ def render_markdown(d: Digest) -> str:
             lines.append("")
     else:
         lines.append("_暂时没抓到符合条件的新闻_")
-        lines.append("")
-
-    if d.ai:
-        lines.append("### 🎯 一句话")
-        lines.append("")
-        lines.append(f"> {d.ai}")
         lines.append("")
 
     quotes = d.extra_of("quote")
@@ -231,6 +232,8 @@ def render_plain(d: Digest) -> str:
         if tips_now:
             lines.append("  🧥 " + " · ".join(tips_now))
         lines.append("")
+    if d.ai:
+        lines.extend(["【今日概览】", "  " + d.ai, ""])
     if d.news:
         for cat, items in _group_news(d.news):
             lines.append(f"【{CATEGORY_LABELS.get(cat, cat)}】")
@@ -238,8 +241,6 @@ def render_plain(d: Digest) -> str:
                 lines.append(f"{idx}. {item.clean_title()}（{item.source_name} · {item.age_text()}）")
                 lines.append(f"   {item.link}")
             lines.append("")
-    if d.ai:
-        lines.extend(["【一句话】", d.ai, ""])
     for e in d.extras:
         if e.kind in ("countdown", "fx"):
             lines.append(f"· {e.text}")
@@ -294,7 +295,7 @@ def render_html(d: Digest) -> str:
 
     if d.ai:
         parts.append(
-            section("🎯 一句话", f'<div style="padding:12px 14px;background:#fffaf0;border-radius:8px">{escape(d.ai)}</div>')
+            section("📌 今日概览", f'<div style="padding:12px 14px;background:#fffaf0;border-radius:8px">{escape(d.ai)}</div>')
         )
 
     tips = d.tips()

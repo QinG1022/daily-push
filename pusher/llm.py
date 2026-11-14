@@ -10,8 +10,9 @@ from . import http
 from .config import LlmConfig
 
 SYSTEM_PROMPT = (
-    "你是一名克制、准确的科技新闻编辑。用一句中文概括今天科技圈的重点，"
-    "不超过 55 个字，不要标题、不要营销腔、不要感叹号堆砌。只输出这一句话。"
+    "你是一名克制、准确的科技新闻编辑。用 1~2 句中文概括下面这些新闻的主线，"
+    "不超过 80 个字：说清今天科技圈最值得注意的一件事和它意味着什么。"
+    "不要标题、不要分点、不要营销腔、不要感叹号堆砌。只输出这段总结。"
 )
 
 
@@ -19,7 +20,7 @@ def summarize(cfg: LlmConfig, headlines: list[str], weather_hint: str = "") -> s
     if not headlines:
         return ""
     body = "\n".join(f"- {h}" for h in headlines)
-    user = f"今日要闻标题：\n{body}\n\n{weather_hint}\n请给出一句概括。"
+    user = f"今日要闻标题：\n{body}\n\n{weather_hint}\n请给出这段总结。"
     try:
         data = http.post_json(
             f"{cfg.base_url}/chat/completions",
