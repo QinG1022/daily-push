@@ -6,6 +6,7 @@
 - **推送渠道可插拔**：Server酱、公众号模板消息、邮件、PushPlus、企业微信机器人
 - **跑在 GitHub Actions 上**，电脑关机也照发。一天三次，每次覆盖不同时段，内容不重复
 - **按行业分板块**：AI 前线 / 半导体芯片 / 手机 / 汽车 / 新能源，各占固定配额；Epic 喜加一有保底
+- **可选 AI 能力**：天气下面一段「今日概览」，加上板块缺货时的全网搜索补位（共用一个 key）
 
 ## 效果长这样
 
@@ -201,6 +202,7 @@ git push -u origin main
 | Name | 值 |
 |---|---|
 | `SERVERCHAN_SENDKEY` | `SCT...` 你的方糖密钥 |
+| `LLM_API_KEY`（可选） | 填了就开启 AI 总结和联网补缺 |
 
 **Variables**（New repository variable）：
 
@@ -237,33 +239,37 @@ git push -u origin main
 
 ---
 
-## 五、加一句 AI 总结（可选）
+## 五、AI 能力（可选）
 
-配好任意 OpenAI 兼容接口即可，不配就不发这一段：
+两项共用一个 key，填了 `LLM_API_KEY` 就同时生效；不填就完全跳过，不影响推送。
+
+### 5.1 今日概览
+
+把当天选出的 12 条标题丢给模型，在**天气下面**生成一段总结——1~2 句、不超过 80 字，说清今天的主线。成本约每次几厘钱。
 
 ```dotenv
 LLM_API_KEY=sk-...
-LLM_BASE_URL=https://api.deepseek.com   # 也可换通义 / Moonshot / 本地 Ollama
-LLM_MODEL=deepseek-flash
+# LLM_BASE_URL=https://api.deepseek.com   # 也可换通义 / Moonshot / 本地 Ollama
+# LLM_MODEL=deepseek-flash
 ```
-
-它会把当天选出的标题丢给模型，在**天气下面**生成一段「📌 今日概览」——1~2 句、不超过 80 字，说清今天的主线。成本约每次几厘钱。
 
 ### 5.2 联网补充（可选）
 
-RSS 只有 7 个源，难免漏掉东西。开启后会用 [DeepSeek Search API](https://api-docs.deepseek.com/zh-cn/guides/search) 按板块搜一遍，把 RSS 没覆盖到的热点补进对应板块：
+RSS 只有 7 个源，难免漏掉东西。开启后，**某个板块配额没填满**时会用 [DeepSeek Search API](https://api-docs.deepseek.com/zh-cn/guides/search) 搜这个板块，把补到的条目**混进对应板块**，不会另起一块：
 
 ```dotenv
-LLM_API_KEY=sk-...      # 一个 key 同时驱动「今日概览」和「联网补缺」
 SEARCH_ENABLED=1        # 改成 0 就只留总结、不联网
 # SEARCH_EXTRA=2        # 每个板块最多补几条
 # SEARCH_BUDGET=5       # 最多查几个板块
 ```
 
-```markdown
-### 🔎 全网补充
+另外，**下午 18:00 那一次**会额外检查 Epic 喜加一：RSS 里没有就用搜索兜底找一条，塞进「🎮 游戏」板块。上午和中午不搜。
 
-1. [某机构发布新一代推理模型，长上下文提升到 2M](https://...)（示例科技 · 2小时前）
+```markdown
+### ⚡ 新能源
+
+1. [吉利星愿 10 月销量突破 7 万辆](https://...)（IT之家 · 5小时前）
+2. [某车厂公布固态电池装车时间表](https://...)（全网搜索 · 3小时前）   ← 联网补进来的
 ```
 
 三个约束保证它不会添乱：
@@ -287,6 +293,9 @@ SEARCH_ENABLED=1        # 改成 0 就只留总结、不联网
 | `NEWS_COUNT` | `6` | 选几条。**设了 `NEWS_MIX` 后此项被忽略**（总数 = 各板块配额之和） |
 | `NEWS_MIX` | 空 | 板块配额，如 `ai:3,chip:3,phone:2,auto:2,energy:2`。留空则纯按分数选 |
 | `NEWS_LOOKBACK_HOURS` | 自动 | 回看多少小时。留空=跟着时段走（早 12h / 午 4h / 晚 6h）；填数字则固定 |
+| `LLM_API_KEY` | 空 | DeepSeek（或任何 OpenAI 兼容接口）的 key。**填了就同时开启「今日概览」和「联网补缺」** |
+| `LLM_BASE_URL` | `https://api.deepseek.com` | 接口地址，可换通义 / Moonshot / 本地 Ollama |
+| `LLM_MODEL` | `deepseek-flash` | 模型名 |
 | `SEARCH_ENABLED` | `1` | 改成 `0` 关闭联网补缺（总结不受影响） |
 | `SEARCH_EXTRA` | `2` | 每个板块最多补几条 |
 | `SEARCH_BUDGET` | `5` | 最多查几个板块（每次查询计费 0.005 元） |
