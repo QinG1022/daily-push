@@ -13,8 +13,7 @@ from datetime import datetime
 from html import escape
 
 from .extras import Extra
-from .news import CATEGORY_LABELS, NewsItem, categorize
-from .search import Hit
+from .news import CATEGORY_LABELS, NewsItem, category_of
 from .weather import Weather, aqi_level, format_forecast_lines, uv_level
 
 SLOT_TITLES = {
@@ -39,8 +38,6 @@ class Digest:
     weather: Weather | None = None
     news: list[NewsItem] = field(default_factory=list)
     extras: list[Extra] = field(default_factory=list)
-    # 联网补充（DeepSeek Search），和 RSS 抓来的分开渲染
-    search_hits: list[Hit] = field(default_factory=list)
     ai: str = ""
     lookback_hours: float = 24.0
     # --test 时直接给定字段，跳过正常渲染
@@ -105,7 +102,7 @@ def _group_news(items: list[NewsItem]) -> list[tuple[str, list[NewsItem]]]:
     """按品类分组，只返回有内容的板块，顺序固定。"""
     buckets: dict[str, list[NewsItem]] = {}
     for item in items:
-        buckets.setdefault(categorize(item.title), []).append(item)
+        buckets.setdefault(category_of(item), []).append(item)
     return [(cat, buckets[cat]) for cat in SECTION_ORDER if buckets.get(cat)]
 
 
@@ -165,15 +162,6 @@ def render_markdown(d: Digest) -> str:
             lines.append("")
     else:
         lines.append("_暂时没抓到符合条件的新闻_")
-        lines.append("")
-
-    if d.search_hits:
-        lines.append("### 🔎 全网补充")
-        lines.append("")
-        for idx, hit in enumerate(d.search_hits, 1):
-            meta = hit.meta()
-            suffix = f"（{meta}）" if meta else ""
-            lines.append(f"{idx}. [{hit.title}]({hit.url}){suffix}")
         lines.append("")
 
     if d.ai:
@@ -250,13 +238,6 @@ def render_plain(d: Digest) -> str:
                 lines.append(f"{idx}. {item.clean_title()}（{item.source_name} · {item.age_text()}）")
                 lines.append(f"   {item.link}")
             lines.append("")
-    if d.search_hits:
-        lines.append("【全网补充】")
-        for idx, hit in enumerate(d.search_hits, 1):
-            meta = hit.meta()
-            lines.append(f"{idx}. {hit.title}（{meta}）" if meta else f"{idx}. {hit.title}")
-            lines.append(f"   {hit.url}")
-        lines.append("")
     if d.ai:
         lines.extend(["【一句话】", d.ai, ""])
     for e in d.extras:

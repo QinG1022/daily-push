@@ -53,6 +53,8 @@ class NewsItem:
     published: datetime | None = None
     summary: str = ""
     score: float = 0.0
+    # 联网补充来的条目，直接指定板块，不靠标题猜
+    forced_category: str = ""
 
     @property
     def age_hours(self) -> float:
@@ -331,6 +333,30 @@ CATEGORY_LABELS = {
 BRAND_CAPS = {
     "phone": 99,   # 手机类不限品牌
 }
+
+
+def category_of(item: NewsItem) -> str:
+    """条目属于哪个板块：联网补充的直接用指定值，RSS 的靠标题判断。"""
+    return item.forced_category or categorize(item.title)
+
+
+def make_external(
+    *,
+    title: str,
+    link: str,
+    source: str = "全网搜索",
+    published: datetime | None = None,
+    category: str = "",
+) -> NewsItem:
+    """把一条外部（搜索结果）新闻包装成 NewsItem，方便和 RSS 内容一起渲染。"""
+    return NewsItem(
+        title=title,
+        link=link,
+        source_key="search",
+        source_name=source,
+        published=published,
+        forced_category=category,
+    )
 
 
 def categorize(title: str) -> str:

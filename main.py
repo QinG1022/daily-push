@@ -121,15 +121,50 @@ def build_digest(cfg: config_mod.Config) -> render.Digest:
     except Exception as exc:
         print(f"[news] ❌ 获取失败：{exc}")
 
-    # ---- 联网补充（DeepSeek Search）----
-    search_hits: list[search.Hit] = []
-    if cfg.search_key and cfg.search_extra > 0:
-        cats = [c for c, _ in cfg.news_mix] or ["ai", "chip", "phone", "auto", "energy"]
-        try:
-            search_hits = search.collect(cfg, [i.link for i in pool], cats)
-            print(f"[search] 联网补充 {len(search_hits)} 条")
-        except Exception as exc:
-            print(f"[search] ❌ 补充失败：{exc}")
+    # ---- 联网补缺（DeepSeek Search）----
+    # 只在某个板块配额没填满时才去搜，补到对应板块里
+    if cfg.search_key and cfg.news_mix:
+        existing = [i.link for i in pool] + [i.link for i in picked]
+        counts: dict[str, int] = {}
+        for item in picked:
+            cat = news.category_of(item)
+            counts[cat] = counts.get(cat, 0) + 1
+
+        added = 0
+        queries = 0
+        for cat, quota in cfg.news_mix:
+            need = quota - counts.get(cat, 0)
+            if need <= 0 or queries >= cfg.search_budget:
+                continue
+            queries += 1
+            for hit in search.fill_section(cfg, cat, existing, need):
+                picked.append(
+                    news.make_external(
+                        title=hit.title,
+                        link=hit.url,
+                        published=hit.published,
+                        category=cat,
+                    )
+                )
+                existing.append(hit.url)
+                added += 1
+
+        # Epic 喜加一单独搜，只在下午那次；RSS 里已经有了就不搜
+        has_epic = any(news._is_epic_free(i.title) for i in picked)
+        if slot == "evening" and not has_epic:
+            epic = search.find_epic(cfg, existing)
+            if epic:
+                picked.append(
+                    news.make_external(
+                        title=epic.title,
+                        link=epic.url,
+                        published=epic.published,
+                        category="game",
+                    )
+                )
+                added += 1
+
+        print(f"[search] 联网补缺 {added} 条（查询 {queries} 次）")
 
     # ---- 附加模块 ----
     ex: list[extras_mod.Extra] = []
@@ -159,7 +194,6 @@ def build_digest(cfg: config_mod.Config) -> render.Digest:
         city=w.city if w else cfg.city,
         weather=w,
         news=picked,
-        search_hits=search_hits,
         extras=ex,
         ai=ai,
         lookback_hours=cfg.news_lookback_hours,

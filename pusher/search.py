@@ -101,38 +101,64 @@ def search_once(cfg: Config, query: str, count: int = 8) -> list[Hit]:
     return hits
 
 
-def collect(cfg: Config, existing_links: Iterable[str], categories: Iterable[str]) -> list[Hit]:
-    """按板块查询，过滤掉已抓到的和低质量的，返回最多 search_extra 条。"""
-    if not cfg.search_key or cfg.search_extra <= 0:
+def _accept(hit: Hit, seen: set[str]) -> bool:
+    key = _normalize(hit.url)
+    if key in seen:
+        return False
+    if hit.authority >= 0 and hit.authority < MIN_AUTHORITY:
+        return False
+    if hit.rerank and hit.rerank < MIN_RERANK:
+        return False
+    return True
+
+
+def fill_section(
+    cfg: Config, category: str, existing_links: Iterable[str], need: int
+) -> list[Hit]:
+    """某个板块缺货时，按该板块的关键词搜一次，返回补得上的条目。"""
+    query = QUERIES.get(category)
+    if not cfg.search_key or need <= 0 or not query:
         return []
 
     seen = {_normalize(link) for link in existing_links}
+    try:
+        hits = search_once(cfg, query)
+    except Exception as exc:
+        print(f"[search] {category} 查询失败：{exc}")
+        return []
+
     picked: list[Hit] = []
-    used = 0
-
-    for cat in categories:
-        if used >= cfg.search_budget:
+    for hit in hits:
+        if len(picked) >= need:
             break
-        query = QUERIES.get(cat)
-        if not query:
-            continue
-        used += 1
-        try:
-            hits = search_once(cfg, query)
-        except Exception as exc:
-            print(f"[search] {cat} 查询失败：{exc}")
-            continue
-
-        for hit in hits:
-            key = _normalize(hit.url)
-            if key in seen:
-                continue
-            if hit.authority >= 0 and hit.authority < MIN_AUTHORITY:
-                continue
-            if hit.rerank and hit.rerank < MIN_RERANK:
-                continue
-            seen.add(key)
+        if _accept(hit, seen):
+            seen.add(_normalize(hit.url))
             picked.append(hit)
+    return picked
 
-    picked.sort(key=lambda h: (h.rerank, h.authority), reverse=True)
-    return picked[: cfg.search_extra]
+
+EPIC_QUERY = "Epic 喜加一 免费游戏 本周"
+_EPIC_HINTS = ("喜加一", "免费领取", "限时免费", "免费送", "限免")
+
+
+def _looks_epic(title: str) -> bool:
+    if any(hint in title for hint in _EPIC_HINTS):
+        return True
+    lowered = title.lower()
+    return "epic" in lowered and ("免费" in title or "领取" in title)
+
+
+def find_epic(cfg: Config, existing_links: Iterable[str]) -> Hit | None:
+    """单独搜一条 Epic 喜加一，只在下午那次调用。"""
+    if not cfg.search_key:
+        return None
+    seen = {_normalize(link) for link in existing_links}
+    try:
+        hits = search_once(cfg, EPIC_QUERY, count=10)
+    except Exception as exc:
+        print(f"[search] Epic 查询失败：{exc}")
+        return None
+    for hit in hits:
+        if _looks_epic(hit.title) and _accept(hit, seen):
+            return hit
+    return None
