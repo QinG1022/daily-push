@@ -50,6 +50,19 @@ def resolve_slot(raw: str, tz: str) -> str:
     return "evening"
 
 
+# 定时任务可能晚几小时才跑，按「本来该在哪个时段」判断，
+# 而不是按实际到达时间——否则中午的任务拖到下午会被当成晚间。
+CRON_SLOTS = {
+    "0 1 * * *": "morning",   # 09:00 CST
+    "0 4 * * *": "noon",      # 12:00 CST
+    "0 10 * * *": "evening",  # 18:00 CST
+}
+
+
+def slot_from_cron(cron: str) -> str:
+    return CRON_SLOTS.get(" ".join(cron.split()), "")
+
+
 # 回看窗口跟着时段走，三次推送才不会整版重复
 SLOT_WINDOWS = {
     "morning": 12.0,   # 09:00 → 覆盖前晚 21:00 至今早
@@ -88,7 +101,7 @@ def load_pool(cfg: config_mod.Config, slot: str) -> tuple[list[news.NewsItem], f
 def build_digest(cfg: config_mod.Config) -> render.Digest:
     tz = ZoneInfo(cfg.timezone)
     now = datetime.now(tz)
-    slot = resolve_slot(cfg.slot, cfg.timezone)
+    slot = slot_from_cron(cfg.trigger_cron) or resolve_slot(cfg.slot, cfg.timezone)
     print(f"[main] {now:%Y-%m-%d %H:%M} ({cfg.timezone}) slot={slot} · 城市={cfg.city}")
 
     # ---- 天气 ----
@@ -247,7 +260,8 @@ def print_compact(digest: render.Digest) -> None:
 def explain_selection(cfg: config_mod.Config) -> int:
     """打印选稿明细和各品类前几名，方便调关键词与配额。不发送任何消息。"""
     print("[explain] 抓取并排序，不发送…")
-    pool, window = load_pool(cfg, resolve_slot(cfg.slot, cfg.timezone))
+    slot = slot_from_cron(cfg.trigger_cron) or resolve_slot(cfg.slot, cfg.timezone)
+    pool, window = load_pool(cfg, slot)
 
     target = sum(q for _, q in cfg.news_mix) if cfg.news_mix else cfg.news_count
     print(

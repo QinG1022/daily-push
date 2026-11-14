@@ -38,6 +38,8 @@ jobs:
         env:
           # ---- 手动触发时用输入值，定时触发时自动按当地时间判断时段 ----
           SLOT: ${{ github.event.inputs.slot || 'auto' }}
+          # 定时任务可能晚几小时才跑，用它还原「本该是哪个时段」
+          TRIGGER_CRON: ${{ github.event.schedule }}
 
           # ---- 仓库变量（Settings → Secrets and variables → Actions → Variables）----
           PUSH_CHANNELS: ${{ vars.PUSH_CHANNELS }}

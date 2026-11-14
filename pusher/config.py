@@ -126,6 +126,8 @@ class Config:
     longitude: float | None = None
     timezone: str = "Asia/Shanghai"
     slot: str = "auto"
+    # GitHub 定时触发时传进来的 cron 表达式，用来还原「本该是哪个时段」
+    trigger_cron: str = ""
 
     # 数据源
     news_sources: list[str] = field(default_factory=list)
@@ -209,6 +211,7 @@ def load_config(slot_override: str | None = None) -> Config:
         longitude=_env_optional_float("LONGITUDE"),
         timezone=_env("TZ_NAME", "Asia/Shanghai"),
         slot=slot_override or _env("SLOT", "auto"),
+        trigger_cron=_env("TRIGGER_CRON"),
         news_sources=_env_list("NEWS_SOURCES", DEFAULT_SOURCES),
         news_count=max(1, _env_int("NEWS_COUNT", 6)),
         news_lookback_hours=_env_float("NEWS_LOOKBACK_HOURS", 0.0),
