@@ -30,15 +30,24 @@ def summarize(cfg: LlmConfig, headlines: list[str], weather_hint: str = "") -> s
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user},
                 ],
+                # DeepSeek V4 默认走思考模式，推理会吃掉 max_tokens 导致正文为空。
+                # 这段总结不需要推理，直接关掉。
+                "thinking": {"type": "disabled"},
                 "temperature": 0.4,
-                "max_tokens": 160,
+                "max_tokens": 400,
                 "stream": False,
             },
             headers={"Authorization": f"Bearer {cfg.api_key}"},
             timeout=cfg.timeout,
         )
-        text = (data.get("choices") or [{}])[0].get("message", {}).get("content", "")
-        text = (text or "").strip().strip("“”\"'").replace("\n", " ")
+        choice = (data.get("choices") or [{}])[0]
+        text = (choice.get("message") or {}).get("content") or ""
+        text = text.strip().strip("“”\"'").replace("\n", " ")
+        if not text:
+            # 返回空内容时把 finish_reason 打出来，方便排查
+            reason = choice.get("finish_reason") or "unknown"
+            usage = data.get("usage") or {}
+            print(f"[llm] 模型返回空内容（finish_reason={reason}, usage={usage}）")
         return text[:120]
     except Exception as exc:
         print(f"[llm] 总结生成失败，跳过：{exc}")
